@@ -1,0 +1,52 @@
+# dependencies
+node_modules/
+
+# env: only .env.example is committed
+.env
+.env.*
+!.env.example
+
+# Expo
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+
+# generated native folders (Continuous Native Generation)
+apps/mobile/ios/
+apps/mobile/android/
+
+# signing material
+*.jks
+*.p8
+*.p12
+*.key
+*.pem
+*.mobileprovision
+
+# Metro
+.metro-health-check*
+
+# Cloudflare Wrangler
+.wrangler/
+.dev.vars
+
+# Firebase emulator
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+.firebase/
+
+# test / coverage
+coverage/
+
+# typescript
+*.tsbuildinfo
+
+# logs
+npm-debug.*
+*.log
+
+# OS / editors
+.DS_Store
+Thumbs.db
