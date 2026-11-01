@@ -1,0 +1,65 @@
+rules_version = '2';
+
+// Spec section 5.4, plus: users/{uid} pointers (section 10), atomic household
+// bootstrap via getAfter(), and createdBy/createdAt integrity on events.
+// Rules are the only real protection: the Firebase web config is public.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function householdPath(hid) {
+      return /databases/$(database)/documents/households/$(hid);
+    }
+
+    function isMember(hid) {
+      return signedIn() && request.auth.uid in get(householdPath(hid)).data.memberUids;
+    }
+
+    // Where a user's household lives, so it can be found again after reinstall.
+    match /users/{uid} {
+      allow read: if signedIn() && request.auth.uid == uid;
+      // The pointer may only name a household this user belongs to. getAfter()
+      // sees the state after the write, so the bootstrap batch (household +
+      // user doc together) passes while pointing at a stranger's household fails.
+      allow create, update: if signedIn() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['householdId'])
+        && request.resource.data.householdId is string
+        && request.auth.uid in getAfter(householdPath(request.resource.data.householdId)).data.memberUids;
+      allow delete: if false;
+    }
+
+    match /households/{hid} {
+      allow read: if signedIn() && request.auth.uid in resource.data.memberUids;
+      allow create: if signedIn()
+        && request.resource.data.memberUids == [request.auth.uid];
+      // membership is immutable for now
+      allow update: if isMember(hid)
+        && request.resource.data.memberUids == resource.data.memberUids;
+      allow delete: if false;
+
+      match /pets/{id} {
+        allow read, write: if isMember(hid);
+      }
+
+      match /products/{id} {
+        allow read, write: if isMember(hid);
+
+        match /ratings/{rid} {
+          allow read, write: if isMember(hid);
+        }
+      }
+
+      // Append-only ledger.
+      match /events/{id} {
+        allow read: if isMember(hid);
+        allow create: if isMember(hid)
+          && request.resource.data.createdBy == request.auth.uid
+          && request.resource.data.createdAt == request.time;
+        allow update, delete: if false;
+      }
+    }
+  }
+}

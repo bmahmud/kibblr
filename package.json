@@ -5,15 +5,17 @@
   "workspaces": [
     "apps/*",
     "packages/*",
-    "workers/*"
+    "workers/*",
+    "firebase"
   ],
   "scripts": {
     "lint": "npm run lint --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
-    "check": "npm run lint && npm run typecheck && npm test"
+    "check": "npm run lint && npm run typecheck && npm test",
+    "test:rules": "npm run test:rules -w @kibblr/firebase"
   },
   "engines": {
-    "node": ">=22"
+    "node": ">=24.12"
   }
 }

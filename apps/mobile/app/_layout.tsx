@@ -1,9 +1,15 @@
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
+import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
+import { useEffect } from 'react';
 
+import { AuthProvider, useAuth } from '@/features/auth/auth-provider';
 import { useTheme } from '@/theme';
 
-// The auth gate (redirect to (auth)/sign-in when signed out) arrives in Phase 1.
+// Keep the splash up until the persisted session has been restored, so a
+// signed-in user never sees the sign-in screen flash on launch.
+void SplashScreen.preventAutoHideAsync();
+
 export default function RootLayout() {
   const { scheme, colors } = useTheme();
   const base = scheme === 'dark' ? DarkTheme : DefaultTheme;
@@ -20,16 +26,39 @@ export default function RootLayout() {
   };
 
   return (
-    <ThemeProvider value={navTheme}>
-      <Stack>
+    <AuthProvider>
+      <ThemeProvider value={navTheme}>
+        <RootStack />
+        <StatusBar style="auto" />
+      </ThemeProvider>
+    </AuthProvider>
+  );
+}
+
+function RootStack() {
+  const { state } = useAuth();
+  const signedIn = state.status === 'signedIn';
+
+  useEffect(() => {
+    if (state.status !== 'loading') {
+      void SplashScreen.hideAsync();
+    }
+  }, [state.status]);
+
+  // The sign-in screen also covers 'loading' after a tap and 'error', so it
+  // stays mounted (keeping its spinner or retry) until the household is ready.
+  return (
+    <Stack>
+      <Stack.Protected guard={signedIn}>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="(auth)/sign-in" options={{ title: 'Sign in', headerShown: false }} />
         <Stack.Screen name="scan" options={{ presentation: 'fullScreenModal', headerShown: false }} />
         <Stack.Screen name="product/[id]" options={{ title: 'Product' }} />
         <Stack.Screen name="product/new" options={{ title: 'New product', presentation: 'modal' }} />
         <Stack.Screen name="history" options={{ title: 'History' }} />
-      </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
+      </Stack.Protected>
+      <Stack.Protected guard={!signedIn}>
+        <Stack.Screen name="(auth)/sign-in" options={{ headerShown: false }} />
+      </Stack.Protected>
+    </Stack>
   );
 }
