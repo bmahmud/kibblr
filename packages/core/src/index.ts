@@ -1,5 +1,19 @@
-export { BASE_UNITS, isBaseUnit } from './units';
-export type { BaseUnit } from './units';
+export {
+  BASE_UNITS,
+  DISPLAY_UNITS,
+  UNIT_LABELS,
+  baseUnitOf,
+  defaultInputUnit,
+  formatAmount,
+  formatDelta,
+  formatNumber,
+  fromBase,
+  isBaseUnit,
+  parseNumber,
+  roundBase,
+  toBase,
+} from './units';
+export type { BaseUnit, DisplayUnit } from './units';
 
 export * from './schemas';
 
@@ -8,3 +22,14 @@ export type { NewHousehold } from './household';
 
 export { MIN_PASSWORD_LENGTH, validateCredentials } from './auth';
 export type { AuthMode, CredentialErrors, CredentialInput } from './auth';
+
+export { computeAdjustment, computeStockChange, undoDelta } from './stock';
+export type { StockChange } from './stock';
+
+export { groupInventory, runwayDays, stockStatus } from './inventory';
+export type { InventoryFilter, InventoryItem, InventoryProduct, StockStatus } from './inventory';
+
+export { newProductDraft, productFormValues, validateProductForm } from './product-form';
+export type { ProductDraft, ProductFields, ProductFormErrors, ProductFormInput, ProductFormResult } from './product-form';
+
+export { formatRelativeTime } from './time';

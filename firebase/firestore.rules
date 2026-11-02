@@ -1,7 +1,8 @@
 rules_version = '2';
 
 // Spec section 5.4, plus: users/{uid} pointers (section 10), atomic household
-// bootstrap via getAfter(), and createdBy/createdAt integrity on events.
+// bootstrap via getAfter(), createdBy/createdAt integrity on events, and
+// non-negative stock on products.
 // Rules are the only real protection: the Firebase web config is public.
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -16,6 +17,13 @@ service cloud.firestore {
 
     function isMember(hid) {
       return signedIn() && request.auth.uid in get(householdPath(hid)).data.memberUids;
+    }
+
+    // Stock can never go negative, even from a buggy client. The app's Zod
+    // schema validates everything else at the boundary.
+    function validStock(data) {
+      return data.onHand is number && data.onHand >= 0
+        && data.packageAmount is number && data.packageAmount > 0;
     }
 
     // Where a user's household lives, so it can be found again after reinstall.
@@ -45,7 +53,8 @@ service cloud.firestore {
       }
 
       match /products/{id} {
-        allow read, write: if isMember(hid);
+        allow read, delete: if isMember(hid);
+        allow create, update: if isMember(hid) && validStock(request.resource.data);
 
         match /ratings/{rid} {
           allow read, write: if isMember(hid);

@@ -2,7 +2,9 @@ import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
+import { ToastProvider } from '@/components/toast';
 import { AuthProvider, useAuth } from '@/features/auth/auth-provider';
 import { useTheme } from '@/theme';
 
@@ -26,12 +28,16 @@ export default function RootLayout() {
   };
 
   return (
-    <AuthProvider>
-      <ThemeProvider value={navTheme}>
-        <RootStack />
-        <StatusBar style="auto" />
-      </ThemeProvider>
-    </AuthProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <AuthProvider>
+        <ThemeProvider value={navTheme}>
+          <ToastProvider>
+            <RootStack />
+          </ToastProvider>
+          <StatusBar style="auto" />
+        </ThemeProvider>
+      </AuthProvider>
+    </GestureHandlerRootView>
   );
 }
 
@@ -52,7 +58,8 @@ function RootStack() {
       <Stack.Protected guard={signedIn}>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="scan" options={{ presentation: 'fullScreenModal', headerShown: false }} />
-        <Stack.Screen name="product/[id]" options={{ title: 'Product' }} />
+        <Stack.Screen name="product/[id]/index" options={{ title: 'Product' }} />
+        <Stack.Screen name="product/[id]/edit" options={{ title: 'Edit product', presentation: 'modal' }} />
         <Stack.Screen name="product/new" options={{ title: 'New product', presentation: 'modal' }} />
         <Stack.Screen name="history" options={{ title: 'History' }} />
       </Stack.Protected>
