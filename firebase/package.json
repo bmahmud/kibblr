@@ -1,0 +1,20 @@
+{
+  "name": "@kibblr/firebase",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Firestore security rules, indexes and their emulator tests.",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test:rules": "firebase emulators:exec --only firestore --project demo-kibblr \"vitest run\"",
+    "deploy": "firebase deploy --only firestore:rules,firestore:indexes --project kibblr"
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^6.0.0",
+    "@types/node": "^24.19.2",
+    "firebase": "^13.1.0",
+    "firebase-tools": "^15.34.2",
+    "typescript": "~6.0.3",
+    "vitest": "^5.0.5"
+  }
+}

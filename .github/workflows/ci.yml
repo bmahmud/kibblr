@@ -36,6 +36,34 @@ jobs:
       - name: Test
         run: npm test
 
-  # Phase 1 adds a Firestore rules job (Firebase emulator, needs Java).
+  rules:
+    name: Firestore rules (emulator)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+
+      # The Firestore emulator is a Java app; firebase-tools needs Java 21+.
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Cache emulator download
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/firebase/emulators
+          key: firebase-emulators-${{ hashFiles('package-lock.json') }}
+
+      - run: npm ci
+
+      - name: Rules tests
+        run: npm run test:rules
+
   # Phase 4 adds the barcode Worker; its tests run through `npm test` via workspaces.
   # EAS builds are triggered manually, never from CI.
