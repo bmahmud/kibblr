@@ -2,6 +2,7 @@ import { undoDelta } from '@kibblr/core';
 import type { EventMethod } from '@kibblr/core';
 
 import { useToast } from '@/components/toast';
+import type { ToastOptions } from '@/components/toast';
 import { useSignedIn } from '@/features/auth/auth-provider';
 
 import { inventoryErrorMessage } from './errors';
@@ -11,11 +12,15 @@ import type { StockChangeResult } from './stock';
 
 /**
  * Stock changes with the toast and Undo (spec section 6.10). Each action
- * resolves to the result, or null if it failed (the toast already says why).
+ * resolves to the result, or null if it failed (the message already says why).
+ *
+ * `notify` replaces the toast where it can't be seen, such as the scanner,
+ * a full-screen modal that covers it.
  */
-export function useStockActions() {
+export function useStockActions(notify?: (options: ToastOptions) => void) {
   const { user, householdId } = useSignedIn();
   const toast = useToast();
+  const show = notify ?? toast.show;
   const ctx = { householdId, uid: user.uid };
 
   async function undo(result: StockChangeResult, method: EventMethod) {
@@ -26,9 +31,9 @@ export function useStockActions() {
         method,
         note: 'undo',
       });
-      toast.show({ message: `Undid the change to ${result.product.name}.` });
+      show({ message: `Undid the change to ${result.product.name}.` });
     } catch (error) {
-      toast.show({ message: inventoryErrorMessage(error), tone: 'error' });
+      show({ message: inventoryErrorMessage(error), tone: 'error' });
     }
   }
 
@@ -36,14 +41,14 @@ export function useStockActions() {
     try {
       const result = await write();
       const message = stockChangeMessage(result.change, result.product);
-      toast.show(
+      show(
         result.eventId === null
           ? { message }
           : { message, action: { label: 'Undo', onPress: () => void undo(result, method) } },
       );
       return result;
     } catch (error) {
-      toast.show({ message: inventoryErrorMessage(error), tone: 'error' });
+      show({ message: inventoryErrorMessage(error), tone: 'error' });
       return null;
     }
   }

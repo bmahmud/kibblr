@@ -127,6 +127,17 @@ describe('newProductDraft', () => {
   });
 });
 
+describe('newProductDraft with a barcode', () => {
+  it('keeps a scanned barcode', () => {
+    const result = validateProductForm(valid);
+    if (!result.ok) {
+      throw new Error('expected a valid form');
+    }
+    expect(newProductDraft(result.fields, '0036000291452').barcode).toBe('0036000291452');
+    expect(newProductDraft(result.fields).barcode).toBeNull();
+  });
+});
+
 describe('productFormValues', () => {
   it('prefills the edit form, showing the size in the household unit', () => {
     expect(
