@@ -1,5 +1,5 @@
-import { formatAmount, formatDelta, formatRelativeTime } from '@kibblr/core';
-import type { BaseUnit, EventMethod, StockEvent, WeightUnit } from '@kibblr/core';
+import { formatCount, formatCountDelta, formatRelativeTime } from '@kibblr/core';
+import type { Container, EventMethod, StockEvent } from '@kibblr/core';
 import { Text, View } from 'react-native';
 
 import { useTheme } from '@/theme';
@@ -13,17 +13,16 @@ const METHOD_LABELS: Record<EventMethod, string> = {
 
 type Props = {
   event: StockEvent;
-  baseUnit: BaseUnit;
-  unit: WeightUnit;
+  container: Container;
   /** Shown in History, where events from many products are mixed. */
   productName?: string;
 };
 
 /** One ledger entry: delta, method, note and when (spec section 6.9). */
-export function EventRow({ event, baseUnit, unit, productName }: Props) {
+export function EventRow({ event, container, productName }: Props) {
   const { colors, spacing, typography } = useTheme();
-  const delta = formatDelta(event.delta, baseUnit, unit);
-  const change = event.type === 'adjust' ? `Set to ${formatAmount(event.onHandAfter, baseUnit, unit)}` : delta;
+  const delta = formatCountDelta(event.delta, container);
+  const change = event.type === 'adjust' ? `Set to ${formatCount(event.onHandAfter, container)}` : delta;
   const detail = [METHOD_LABELS[event.method], event.type === 'adjust' ? delta : null, event.note]
     .filter(Boolean)
     .join(' · ');
@@ -51,7 +50,7 @@ export function EventRow({ event, baseUnit, unit, productName }: Props) {
       <View style={{ alignItems: 'flex-end', gap: 2 }}>
         <Text style={[typography.caption, { color: colors.textMuted }]}>{formatRelativeTime(event.createdAt)}</Text>
         <Text style={[typography.caption, { color: colors.textMuted }]}>
-          {formatAmount(event.onHandAfter, baseUnit, unit)} left
+          {formatCount(event.onHandAfter, container)} left
         </Text>
       </View>
     </View>

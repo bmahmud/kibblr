@@ -1,8 +1,11 @@
+import type { Container } from './schemas';
+
 /**
- * Base units (spec section 4). All stock math is done in these; the UI converts
- * to lb/oz/cups for display and input.
+ * Base units for a package's size (spec section 5.1 `size`). Stock itself is
+ * counted in packages (see `count.ts`); sizes are stored in these and shown in
+ * lb/oz/fl oz or kg/g/ml.
  */
-export const BASE_UNITS = ['g', 'ml', 'count'] as const;
+export const BASE_UNITS = ['g', 'ml'] as const;
 
 export type BaseUnit = (typeof BASE_UNITS)[number];
 
@@ -17,7 +20,6 @@ export function isBaseUnit(value: unknown): value is BaseUnit {
 export const DISPLAY_UNITS = {
   g: ['lb', 'oz', 'kg', 'g'],
   ml: ['floz', 'cup', 'ml'],
-  count: ['count'],
 } as const satisfies Record<BaseUnit, readonly string[]>;
 
 export type DisplayUnit = (typeof DISPLAY_UNITS)[BaseUnit][number];
@@ -30,7 +32,6 @@ export const UNIT_LABELS: Record<DisplayUnit, string> = {
   floz: 'fl oz',
   cup: 'cup',
   ml: 'ml',
-  count: 'ct',
 };
 
 /** Base units per one display unit. */
@@ -42,22 +43,16 @@ const UNITS: Record<DisplayUnit, { base: BaseUnit; factor: number }> = {
   floz: { base: 'ml', factor: 29.5735295625 },
   cup: { base: 'ml', factor: 236.5882365 },
   ml: { base: 'ml', factor: 1 },
-  count: { base: 'count', factor: 1 },
 };
 
 export function baseUnitOf(unit: DisplayUnit): BaseUnit {
   return UNITS[unit].base;
 }
 
-/**
- * Rounds an amount to what is stored: whole grams and millilitres, hundredths
- * of a count (a quarter can). Applied wherever an amount enters storage, so
- * float drift never accumulates in `onHand`.
- */
-export function roundBase(amount: number, baseUnit: BaseUnit): number {
-  const step = baseUnit === 'count' ? 100 : 1;
+/** Rounds a size to what is stored: whole grams and millilitres. */
+export function roundBase(amount: number): number {
   // `+ 0` turns -0 into 0.
-  return Math.round(amount * step) / step + 0;
+  return Math.round(amount) + 0;
 }
 
 function assertAmount(value: number, what: string): void {
@@ -69,8 +64,7 @@ function assertAmount(value: number, what: string): void {
 /** Display-unit value to a stored base amount. */
 export function toBase(value: number, unit: DisplayUnit): number {
   assertAmount(value, 'Amount');
-  const { base, factor } = UNITS[unit];
-  return roundBase(value * factor, base);
+  return roundBase(value * UNITS[unit].factor);
 }
 
 /** Base amount to a display-unit value, unrounded. */
@@ -92,39 +86,35 @@ export function formatNumber(value: number): string {
   return String(Math.round(value * 10) / 10 + 0);
 }
 
-function displayUnitFor(amount: number, baseUnit: BaseUnit, preferred: 'lb' | 'kg'): DisplayUnit {
-  switch (baseUnit) {
-    case 'g':
-      if (preferred === 'lb') {
-        return amount === 0 || amount >= UNITS.lb.factor ? 'lb' : 'oz';
-      }
-      return amount === 0 || amount >= 1000 ? 'kg' : 'g';
-    case 'ml':
-      return preferred === 'lb' ? 'floz' : 'ml';
-    case 'count':
-      return 'count';
+/** A package's net weight or volume, e.g. 85 g for a 3 oz can. */
+export type Size = { amount: number; unit: BaseUnit };
+
+/** The unit a size reads best in: oz under a pound (g under a kilogram), fl oz or ml for volume. */
+export function sizeDisplayUnit(size: Size, preferred: 'lb' | 'kg'): DisplayUnit {
+  if (size.unit === 'ml') {
+    return preferred === 'lb' ? 'floz' : 'ml';
   }
+  if (preferred === 'lb') {
+    return size.amount >= UNITS.lb.factor ? 'lb' : 'oz';
+  }
+  return size.amount >= 1000 ? 'kg' : 'g';
 }
 
-/** Friendly on-hand text, e.g. "7.2 lb", "5.3 oz", "850 g", "3 ct". */
-export function formatAmount(amount: number, baseUnit: BaseUnit, preferred: 'lb' | 'kg'): string {
-  const unit = displayUnitFor(Math.abs(amount), baseUnit, preferred);
-  return `${formatNumber(fromBase(amount, unit))} ${UNIT_LABELS[unit]}`;
+/** Friendly size text, e.g. "3 oz", "16 lb", "12 fl oz", "850 g". */
+export function formatSize(size: Size, preferred: 'lb' | 'kg'): string {
+  const unit = sizeDisplayUnit(size, preferred);
+  return `${formatNumber(fromBase(size.amount, unit))} ${UNIT_LABELS[unit]}`;
 }
 
-/** Signed change, e.g. "+12 lb" or "−5.3 oz" (with a real minus sign). */
-export function formatDelta(delta: number, baseUnit: BaseUnit, preferred: 'lb' | 'kg'): string {
-  return `${delta < 0 ? '−' : '+'}${formatAmount(Math.abs(delta), baseUnit, preferred)}`;
-}
-
-/** The unit an amount field starts on (spec open question 3: lb / oz households). */
-export function defaultInputUnit(baseUnit: BaseUnit, preferred: 'lb' | 'kg'): DisplayUnit {
-  switch (baseUnit) {
-    case 'g':
+/** The unit the size field starts on: bags and boxes by the pound or kilo, bottles by volume, the rest by oz or g. */
+export function defaultSizeUnit(container: Container, preferred: 'lb' | 'kg'): DisplayUnit {
+  switch (container) {
+    case 'bag':
+    case 'box':
       return preferred;
-    case 'ml':
+    case 'bottle':
       return preferred === 'lb' ? 'floz' : 'ml';
-    case 'count':
-      return 'count';
+    default:
+      return preferred === 'lb' ? 'oz' : 'g';
   }
 }

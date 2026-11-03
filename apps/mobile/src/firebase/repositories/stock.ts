@@ -50,8 +50,8 @@ export function runStockTransaction(write: StockWrite): Promise<StockWriteResult
     const product = snapshot.data();
     const change =
       write.kind === 'delta'
-        ? computeStockChange({ onHand: product.onHand, delta: write.delta, baseUnit: product.baseUnit })
-        : computeAdjustment({ onHand: product.onHand, target: write.target, baseUnit: product.baseUnit });
+        ? computeStockChange({ onHand: product.onHand, delta: write.delta })
+        : computeAdjustment({ onHand: product.onHand, target: write.target });
 
     if (change.type === null) {
       return { change, product, eventId: null };

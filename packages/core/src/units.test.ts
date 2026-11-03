@@ -4,14 +4,14 @@ import {
   BASE_UNITS,
   DISPLAY_UNITS,
   baseUnitOf,
-  defaultInputUnit,
-  formatAmount,
-  formatDelta,
+  defaultSizeUnit,
   formatNumber,
+  formatSize,
   fromBase,
   isBaseUnit,
   parseNumber,
   roundBase,
+  sizeDisplayUnit,
   toBase,
 } from './units';
 
@@ -25,16 +25,16 @@ describe('isBaseUnit', () => {
   it('rejects display units and non-strings', () => {
     expect(isBaseUnit('lb')).toBe(false);
     expect(isBaseUnit('G')).toBe(false);
+    expect(isBaseUnit('count')).toBe(false);
     expect(isBaseUnit(1)).toBe(false);
     expect(isBaseUnit(null)).toBe(false);
   });
 });
 
 describe('DISPLAY_UNITS', () => {
-  it('offers weight units for g, volume units (with cups) for ml, and count for count', () => {
+  it('offers weight units for g and volume units (with cups) for ml', () => {
     expect(DISPLAY_UNITS.g).toEqual(['lb', 'oz', 'kg', 'g']);
     expect(DISPLAY_UNITS.ml).toEqual(['floz', 'cup', 'ml']);
-    expect(DISPLAY_UNITS.count).toEqual(['count']);
   });
 
   it('maps every display unit back to its base unit', () => {
@@ -48,18 +48,13 @@ describe('DISPLAY_UNITS', () => {
 
 describe('roundBase', () => {
   it('rounds grams and millilitres to whole units', () => {
-    expect(roundBase(5443.108, 'g')).toBe(5443);
-    expect(roundBase(28.5, 'g')).toBe(29);
-    expect(roundBase(236.588, 'ml')).toBe(237);
-  });
-
-  it('rounds counts to hundredths', () => {
-    expect(roundBase(0.333333, 'count')).toBe(0.33);
-    expect(roundBase(0.1 + 0.2, 'count')).toBe(0.3);
+    expect(roundBase(5443.108)).toBe(5443);
+    expect(roundBase(28.5)).toBe(29);
+    expect(roundBase(236.588)).toBe(237);
   });
 
   it('never returns negative zero', () => {
-    expect(Object.is(roundBase(-0.2, 'g'), 0)).toBe(true);
+    expect(Object.is(roundBase(-0.2), 0)).toBe(true);
   });
 });
 
@@ -76,11 +71,6 @@ describe('toBase', () => {
     expect(toBase(1, 'cup')).toBe(237);
     expect(toBase(12, 'floz')).toBe(355);
     expect(toBase(500, 'ml')).toBe(500);
-  });
-
-  it('keeps fractional counts to hundredths', () => {
-    expect(toBase(0.25, 'count')).toBe(0.25);
-    expect(toBase(1 / 3, 'count')).toBe(0.33);
   });
 
   it('accepts zero', () => {
@@ -100,7 +90,6 @@ describe('fromBase', () => {
     expect(fromBase(5443, 'lb')).toBeCloseTo(11.9998, 3);
     expect(fromBase(1000, 'kg')).toBe(1);
     expect(fromBase(236.5882365, 'cup')).toBeCloseTo(1, 10);
-    expect(fromBase(3, 'count')).toBe(3);
   });
 
   it('round-trips through toBase within a gram', () => {
@@ -146,49 +135,43 @@ describe('formatNumber', () => {
   });
 });
 
-describe('formatAmount', () => {
-  it('shows pounds, or ounces under a pound, for lb households', () => {
-    expect(formatAmount(3266, 'g', 'lb')).toBe('7.2 lb');
-    expect(formatAmount(454, 'g', 'lb')).toBe('1 lb');
-    expect(formatAmount(150, 'g', 'lb')).toBe('5.3 oz');
+describe('sizeDisplayUnit', () => {
+  it('uses pounds, or ounces under a pound, for lb households', () => {
+    expect(sizeDisplayUnit({ amount: 5443, unit: 'g' }, 'lb')).toBe('lb');
+    expect(sizeDisplayUnit({ amount: 85, unit: 'g' }, 'lb')).toBe('oz');
   });
 
-  it('shows kilograms, or grams under a kilogram, for kg households', () => {
-    expect(formatAmount(3400, 'g', 'kg')).toBe('3.4 kg');
-    expect(formatAmount(1000, 'g', 'kg')).toBe('1 kg');
-    expect(formatAmount(850, 'g', 'kg')).toBe('850 g');
+  it('uses kilograms, or grams under a kilogram, for kg households', () => {
+    expect(sizeDisplayUnit({ amount: 2000, unit: 'g' }, 'kg')).toBe('kg');
+    expect(sizeDisplayUnit({ amount: 85, unit: 'g' }, 'kg')).toBe('g');
   });
 
-  it('shows zero in the larger unit', () => {
-    expect(formatAmount(0, 'g', 'lb')).toBe('0 lb');
-    expect(formatAmount(0, 'g', 'kg')).toBe('0 kg');
-  });
-
-  it('shows fluid ounces for lb households and millilitres for kg households', () => {
-    expect(formatAmount(355, 'ml', 'lb')).toBe('12 fl oz');
-    expect(formatAmount(355, 'ml', 'kg')).toBe('355 ml');
-  });
-
-  it('shows counts with a "ct" suffix', () => {
-    expect(formatAmount(3, 'count', 'lb')).toBe('3 ct');
-    expect(formatAmount(0.25, 'count', 'kg')).toBe('0.3 ct');
+  it('uses fluid ounces or millilitres for volume', () => {
+    expect(sizeDisplayUnit({ amount: 355, unit: 'ml' }, 'lb')).toBe('floz');
+    expect(sizeDisplayUnit({ amount: 355, unit: 'ml' }, 'kg')).toBe('ml');
   });
 });
 
-describe('formatDelta', () => {
-  it('signs the change', () => {
-    expect(formatDelta(5443, 'g', 'lb')).toBe('+12 lb');
-    expect(formatDelta(-150, 'g', 'lb')).toBe('−5.3 oz');
-    expect(formatDelta(-1, 'count', 'lb')).toBe('−1 ct');
+describe('formatSize', () => {
+  it('formats a can or bag size in the household unit', () => {
+    expect(formatSize({ amount: 85, unit: 'g' }, 'lb')).toBe('3 oz');
+    expect(formatSize({ amount: 156, unit: 'g' }, 'lb')).toBe('5.5 oz');
+    expect(formatSize({ amount: 7257, unit: 'g' }, 'lb')).toBe('16 lb');
+    expect(formatSize({ amount: 454, unit: 'g' }, 'lb')).toBe('1 lb');
+    expect(formatSize({ amount: 85, unit: 'g' }, 'kg')).toBe('85 g');
+    expect(formatSize({ amount: 3400, unit: 'g' }, 'kg')).toBe('3.4 kg');
+    expect(formatSize({ amount: 355, unit: 'ml' }, 'lb')).toBe('12 fl oz');
+    expect(formatSize({ amount: 355, unit: 'ml' }, 'kg')).toBe('355 ml');
   });
 });
 
-describe('defaultInputUnit', () => {
-  it('uses lb / fl oz for lb households and kg / ml for kg households', () => {
-    expect(defaultInputUnit('g', 'lb')).toBe('lb');
-    expect(defaultInputUnit('ml', 'lb')).toBe('floz');
-    expect(defaultInputUnit('g', 'kg')).toBe('kg');
-    expect(defaultInputUnit('ml', 'kg')).toBe('ml');
-    expect(defaultInputUnit('count', 'lb')).toBe('count');
+describe('defaultSizeUnit', () => {
+  it('starts bags and boxes on lb or kg, bottles on fl oz or ml, and the rest on oz or g', () => {
+    expect(defaultSizeUnit('bag', 'lb')).toBe('lb');
+    expect(defaultSizeUnit('box', 'kg')).toBe('kg');
+    expect(defaultSizeUnit('bottle', 'lb')).toBe('floz');
+    expect(defaultSizeUnit('bottle', 'kg')).toBe('ml');
+    expect(defaultSizeUnit('can', 'lb')).toBe('oz');
+    expect(defaultSizeUnit('pouch', 'kg')).toBe('g');
   });
 });

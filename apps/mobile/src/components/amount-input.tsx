@@ -1,5 +1,5 @@
-import { DISPLAY_UNITS, UNIT_LABELS } from '@kibblr/core';
-import type { BaseUnit, DisplayUnit } from '@kibblr/core';
+import { UNIT_LABELS } from '@kibblr/core';
+import type { DisplayUnit } from '@kibblr/core';
 import { View } from 'react-native';
 
 import { Chips } from '@/components/chips';
@@ -8,7 +8,7 @@ import { useTheme } from '@/theme';
 
 type Props = {
   label: string;
-  baseUnit: BaseUnit;
+  units: readonly DisplayUnit[];
   value: string;
   onChangeValue: (text: string) => void;
   unit: DisplayUnit;
@@ -17,10 +17,9 @@ type Props = {
   placeholder?: string;
 };
 
-/** A number field plus the display units that fit the product's base unit. */
-export function AmountInput({ label, baseUnit, value, onChangeValue, unit, onChangeUnit, error, placeholder }: Props) {
+/** A number field plus a row of unit chips. */
+export function AmountInput({ label, units, value, onChangeValue, unit, onChangeUnit, error, placeholder }: Props) {
   const { spacing } = useTheme();
-  const units = DISPLAY_UNITS[baseUnit];
 
   return (
     <View style={{ gap: spacing.sm }}>
@@ -32,14 +31,13 @@ export function AmountInput({ label, baseUnit, value, onChangeValue, unit, onCha
         keyboardType="decimal-pad"
         placeholder={placeholder}
       />
-      {units.length > 1 ? (
-        <Chips
-          label={`${label} unit`}
-          options={units.map((u) => ({ value: u, label: UNIT_LABELS[u] }))}
-          selected={unit}
-          onSelect={onChangeUnit}
-        />
-      ) : null}
+      <Chips
+        label={`${label} unit`}
+        scroll
+        options={units.map((u) => ({ value: u, label: UNIT_LABELS[u] }))}
+        selected={unit}
+        onSelect={onChangeUnit}
+      />
     </View>
   );
 }

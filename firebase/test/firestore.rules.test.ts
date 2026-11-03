@@ -51,8 +51,8 @@ const eventData = (createdBy: string) => ({
   petId: null,
   type: 'add',
   method: 'manual',
-  delta: 100,
-  onHandAfter: 100,
+  delta: 12,
+  onHandAfter: 12,
   note: null,
   createdAt: serverTimestamp(),
   createdBy,
@@ -61,8 +61,8 @@ const eventData = (createdBy: string) => ({
 /** Just the fields the rules check; the app's Zod schema covers the rest. */
 const productData = (overrides: Record<string, unknown> = {}) => ({
   name: 'Food',
-  onHand: 100,
-  packageAmount: 5443,
+  container: 'can',
+  onHand: 12,
   ...overrides,
 });
 
@@ -250,14 +250,14 @@ describe('products (stock fields)', () => {
 
   it('rejects a missing or non-numeric on hand', async () => {
     await seedHousehold();
-    await assertFails(setDoc(doc(owner(), newPath), { name: 'Food', packageAmount: 5443 }));
-    await assertFails(updateDoc(doc(owner(), existing), { onHand: '100' }));
+    await assertFails(setDoc(doc(owner(), newPath), { name: 'Food', container: 'can' }));
+    await assertFails(updateDoc(doc(owner(), existing), { onHand: '12' }));
   });
 
-  it('rejects a package amount that is not positive', async () => {
+  it('rejects a missing or non-string container', async () => {
     await seedHousehold();
-    await assertFails(setDoc(doc(owner(), newPath), productData({ packageAmount: 0 })));
-    await assertFails(updateDoc(doc(owner(), existing), { packageAmount: -5 }));
+    await assertFails(setDoc(doc(owner(), newPath), { name: 'Food', onHand: 0 }));
+    await assertFails(updateDoc(doc(owner(), existing), { container: 3 }));
   });
 
   it('allows the stock transaction: product update plus event create together', async () => {
@@ -267,12 +267,12 @@ describe('products (stock fields)', () => {
     await assertSucceeds(
       runTransaction(fs, async (tx) => {
         const snapshot = await tx.get(productRef);
-        const onHand = (snapshot.data()?.onHand as number) - 40;
+        const onHand = (snapshot.data()?.onHand as number) - 1;
         tx.update(productRef, { onHand, updatedAt: serverTimestamp() });
         tx.set(doc(fs, `households/${HID}/events/e3`), {
           ...eventData(OWNER),
           type: 'remove',
-          delta: -40,
+          delta: -1,
           onHandAfter: onHand,
         });
       }),

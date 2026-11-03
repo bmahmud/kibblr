@@ -1,6 +1,5 @@
+import { roundCount } from './count';
 import type { EventType } from './schemas';
-import { roundBase } from './units';
-import type { BaseUnit } from './units';
 
 /**
  * The pure half of `applyStockChange` (spec section 5.3): what a requested
@@ -10,7 +9,7 @@ import type { BaseUnit } from './units';
 export type StockChange = {
   before: number;
   after: number;
-  /** The change actually applied, after clamping and rounding. Becomes the event's `delta`. */
+  /** Packages actually applied, after clamping and rounding. Becomes the event's `delta`. */
   applied: number;
   /** True when a remove asked for more than was on hand. */
   clamped: boolean;
@@ -32,14 +31,14 @@ function assertOnHand(onHand: number): void {
 }
 
 /** Adds or removes `delta`, clamping at 0: removing more than is on hand empties the product. */
-export function computeStockChange(input: { onHand: number; delta: number; baseUnit: BaseUnit }): StockChange {
-  const { onHand, delta, baseUnit } = input;
+export function computeStockChange(input: { onHand: number; delta: number }): StockChange {
+  const { onHand, delta } = input;
   assertOnHand(onHand);
   assertFinite(delta, 'delta');
 
   const requested = onHand + delta;
-  const after = roundBase(Math.max(0, requested), baseUnit);
-  const applied = roundBase(after - onHand, baseUnit);
+  const after = roundCount(Math.max(0, requested));
+  const applied = roundCount(after - onHand);
   return {
     before: onHand,
     after: applied === 0 ? onHand : after,
@@ -50,16 +49,16 @@ export function computeStockChange(input: { onHand: number; delta: number; baseU
 }
 
 /** Sets on hand to a counted amount ("I actually have 3 cans"), recorded as an adjust event. */
-export function computeAdjustment(input: { onHand: number; target: number; baseUnit: BaseUnit }): StockChange {
-  const { onHand, target, baseUnit } = input;
+export function computeAdjustment(input: { onHand: number; target: number }): StockChange {
+  const { onHand, target } = input;
   assertOnHand(onHand);
   assertFinite(target, 'target');
   if (target < 0) {
     throw new RangeError(`target must not be negative (got ${target})`);
   }
 
-  const after = roundBase(target, baseUnit);
-  const applied = roundBase(after - onHand, baseUnit);
+  const after = roundCount(target);
+  const applied = roundCount(after - onHand);
   return {
     before: onHand,
     after: applied === 0 ? onHand : after,

@@ -86,7 +86,7 @@ export default function InventoryScreen() {
     }
     if (all.length === 0) {
       return (
-        <EmptyState title="Add your first product" body="Add a bag or can you have at home, then track it as you use it.">
+        <EmptyState title="Add your first product" body="Add the cans and bags you have at home, then count them down as you use them.">
           <Button label="Add a product" onPress={() => router.push('/product/new')} />
         </EmptyState>
       );
@@ -132,8 +132,8 @@ export default function InventoryScreen() {
           product={item.product}
           status={item.status}
           unit={settings.preferredWeightUnit}
-          onAdd={() => void actions.change(item.product.id, item.product.packageAmount)}
-          onUse={() => void actions.change(item.product.id, -item.product.packageAmount)}
+          onAdd={() => void actions.change(item.product.id, 1)}
+          onUse={() => void actions.change(item.product.id, -1)}
         />
       )}
     />

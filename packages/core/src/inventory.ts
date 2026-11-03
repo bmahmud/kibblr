@@ -3,7 +3,7 @@ import type { Category, HouseholdSettings, Product } from './schemas';
 /** The product fields stock status and the Inventory list need. */
 export type InventoryProduct = Pick<
   Product,
-  'name' | 'brand' | 'category' | 'onHand' | 'packageAmount' | 'dailyUsage' | 'lowStock' | 'archived'
+  'name' | 'brand' | 'category' | 'onHand' | 'dailyUsage' | 'lowStock' | 'archived'
 >;
 
 export type StockStatus = 'out' | 'low' | 'ok';
@@ -18,7 +18,7 @@ export function runwayDays(product: Pick<Product, 'onHand' | 'dailyUsage'>): num
 
 /** Out at zero; low per the product's rule, or the household default (spec section 8 `isLow`). */
 export function stockStatus(
-  product: Pick<Product, 'onHand' | 'packageAmount' | 'dailyUsage' | 'lowStock'>,
+  product: Pick<Product, 'onHand' | 'dailyUsage' | 'lowStock'>,
   settings: Pick<HouseholdSettings, 'defaultLowStockDays'>,
 ): StockStatus {
   if (product.onHand === 0) {
@@ -29,7 +29,8 @@ export function stockStatus(
     return product.onHand <= rule.value ? 'low' : 'ok';
   }
   const runway = runwayDays(product);
-  const low = runway === null ? product.onHand <= product.packageAmount * 0.25 : runway <= rule.value;
+  // Without a usage rate, the last package is low.
+  const low = runway === null ? product.onHand <= 1 : runway <= rule.value;
   return low ? 'low' : 'ok';
 }
 

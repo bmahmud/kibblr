@@ -1,4 +1,4 @@
-import { defaultInputUnit, newProductDraft } from '@kibblr/core';
+import { defaultContainer, defaultSizeUnit, newProductDraft } from '@kibblr/core';
 import type { ProductFields } from '@kibblr/core';
 import { router } from 'expo-router';
 
@@ -16,7 +16,7 @@ export default function NewProductScreen() {
   const toast = useToast();
   const actions = useStockActions();
 
-  async function save(fields: ProductFields, startingAmount: number) {
+  async function save(fields: ProductFields, startingCount: number) {
     let productId: string;
     try {
       productId = await createProduct(householdId, newProductDraft(fields));
@@ -25,9 +25,9 @@ export default function NewProductScreen() {
       return;
     }
     // Starting stock goes through the ledger like any other change, so
-    // History begins with the first bag. Its toast (with Undo) says what happened.
-    if (startingAmount > 0) {
-      await actions.change(productId, startingAmount);
+    // History begins with the first can. Its toast (with Undo) says what happened.
+    if (startingCount > 0) {
+      await actions.change(productId, startingCount);
     } else {
       toast.show({ message: `Added ${fields.name}.` });
     }
@@ -43,11 +43,11 @@ export default function NewProductScreen() {
         mode: 'create',
         name: '',
         brand: '',
-        category: 'dry',
-        baseUnit: 'g',
-        packageSize: '',
-        packageUnit: defaultInputUnit('g', unit),
-        startingPackages: '1',
+        category: 'wet',
+        container: defaultContainer('wet'),
+        sizeValue: '',
+        sizeUnit: defaultSizeUnit(defaultContainer('wet'), unit),
+        startingCount: '1',
       }}
     />
   );

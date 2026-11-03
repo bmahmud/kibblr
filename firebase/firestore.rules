@@ -23,7 +23,7 @@ service cloud.firestore {
     // schema validates everything else at the boundary.
     function validStock(data) {
       return data.onHand is number && data.onHand >= 0
-        && data.packageAmount is number && data.packageAmount > 0;
+        && data.container is string;
     }
 
     // Where a user's household lives, so it can be found again after reinstall.

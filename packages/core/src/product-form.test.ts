@@ -6,54 +6,53 @@ import { productSchema } from './schemas';
 
 const valid: ProductFormInput = {
   mode: 'create',
-  name: '  Chicken Kibble ',
-  brand: ' Acme ',
-  category: 'dry',
-  baseUnit: 'g',
-  packageSize: '12',
-  packageUnit: 'lb',
-  startingPackages: '2',
+  name: '  Salmon Feast ',
+  brand: ' Fancy Feast ',
+  category: 'pate',
+  container: 'can',
+  sizeValue: '3',
+  sizeUnit: 'oz',
+  startingCount: '12',
 };
 
 describe('validateProductForm', () => {
-  it('builds trimmed fields, the package amount in base units and a label', () => {
-    const result = validateProductForm(valid);
-    expect(result).toEqual({
+  it('builds trimmed fields, the size in base units and the starting count', () => {
+    expect(validateProductForm(valid)).toEqual({
       ok: true,
       fields: {
-        name: 'Chicken Kibble',
-        brand: 'Acme',
-        category: 'dry',
-        baseUnit: 'g',
-        packageAmount: 5443,
-        packageLabel: '12 lb',
+        name: 'Salmon Feast',
+        brand: 'Fancy Feast',
+        category: 'pate',
+        container: 'can',
+        size: { amount: 85, unit: 'g' },
       },
-      startingAmount: 10886,
+      startingCount: 12,
     });
   });
 
-  it('treats an empty starting amount as zero', () => {
-    const result = validateProductForm({ ...valid, startingPackages: ' ' });
-    expect(result.ok && result.startingAmount).toBe(0);
+  it('makes the size optional', () => {
+    const result = validateProductForm({ ...valid, sizeValue: '  ' });
+    expect(result.ok && result.fields.size).toBeNull();
   });
 
-  it('allows fractional starting packages', () => {
-    const result = validateProductForm({ ...valid, startingPackages: '0.5' });
-    expect(result.ok && result.startingAmount).toBe(2722);
+  it('stores a volume size in millilitres', () => {
+    const result = validateProductForm({ ...valid, container: 'bottle', sizeValue: '8', sizeUnit: 'floz' });
+    expect(result.ok && result.fields.size).toEqual({ amount: 237, unit: 'ml' });
   });
 
-  it('uses the unit label in the package label', () => {
-    const result = validateProductForm({ ...valid, baseUnit: 'ml', packageSize: '13.2', packageUnit: 'floz' });
-    expect(result.ok && result.fields.packageLabel).toBe('13.2 fl oz');
-    expect(result.ok && result.fields.packageAmount).toBe(390);
-
-    const cans = validateProductForm({ ...valid, baseUnit: 'count', packageSize: '1', packageUnit: 'count' });
-    expect(cans.ok && cans.fields.packageLabel).toBe('1 ct');
+  it('treats an empty starting count as zero', () => {
+    const result = validateProductForm({ ...valid, startingCount: ' ' });
+    expect(result.ok && result.startingCount).toBe(0);
   });
 
-  it('ignores the starting amount when editing', () => {
-    const result = validateProductForm({ ...valid, mode: 'edit', startingPackages: 'nonsense' });
-    expect(result.ok && result.startingAmount).toBe(0);
+  it('allows a fractional starting count, rounded to hundredths', () => {
+    expect(validateProductForm({ ...valid, startingCount: '1.5' })).toMatchObject({ startingCount: 1.5 });
+    expect(validateProductForm({ ...valid, startingCount: '0.333' })).toMatchObject({ startingCount: 0.33 });
+  });
+
+  it('ignores the starting count when editing', () => {
+    const result = validateProductForm({ ...valid, mode: 'edit', startingCount: 'nonsense' });
+    expect(result.ok && result.startingCount).toBe(0);
   });
 
   it('requires a name and keeps it and the brand within limits', () => {
@@ -76,38 +75,29 @@ describe('validateProductForm', () => {
     expect(result.ok && result.fields.brand).toBe('');
   });
 
-  it('requires a positive package size', () => {
-    expect(validateProductForm({ ...valid, packageSize: '' })).toMatchObject({
-      errors: { packageSize: 'Enter the package size.' },
+  it('rejects a size that is not a positive number', () => {
+    expect(validateProductForm({ ...valid, sizeValue: 'three' })).toMatchObject({
+      errors: { size: 'Enter a number, like 3 or 5.5, or leave it blank.' },
     });
-    expect(validateProductForm({ ...valid, packageSize: 'twelve' })).toMatchObject({
-      errors: { packageSize: 'Enter a number, like 12 or 5.5.' },
+    expect(validateProductForm({ ...valid, sizeValue: '0' })).toMatchObject({
+      errors: { size: 'The size must be more than 0.' },
     });
-    expect(validateProductForm({ ...valid, packageSize: '0' })).toMatchObject({
-      errors: { packageSize: 'The package size must be more than 0.' },
-    });
-    // Rounds to 0 g, which would make every scan a no-op.
-    expect(validateProductForm({ ...valid, packageSize: '0.001', packageUnit: 'oz' })).toMatchObject({
-      errors: { packageSize: 'The package size must be more than 0.' },
+    // Rounds to 0 g.
+    expect(validateProductForm({ ...valid, sizeValue: '0.001' })).toMatchObject({
+      errors: { size: 'The size must be more than 0.' },
     });
   });
 
-  it("rejects a package unit that doesn't match the base unit", () => {
-    expect(validateProductForm({ ...valid, baseUnit: 'count', packageUnit: 'lb' })).toMatchObject({
-      errors: { packageSize: 'Pick a unit for the package size.' },
-    });
-  });
-
-  it('rejects a starting amount that is not a number', () => {
-    expect(validateProductForm({ ...valid, startingPackages: '-1' })).toMatchObject({
-      errors: { startingPackages: 'Enter 0 or more packages.' },
+  it('rejects a starting count that is not a number', () => {
+    expect(validateProductForm({ ...valid, startingCount: '-1' })).toMatchObject({
+      errors: { startingCount: 'Enter 0 or more, like 12 or 1.5.' },
     });
   });
 
   it('reports every error at once', () => {
-    const result = validateProductForm({ ...valid, name: '', packageSize: '', startingPackages: 'x' });
+    const result = validateProductForm({ ...valid, name: '', sizeValue: 'x', startingCount: 'x' });
     expect(result.ok).toBe(false);
-    expect(!result.ok && Object.keys(result.errors).sort()).toEqual(['name', 'packageSize', 'startingPackages']);
+    expect(!result.ok && Object.keys(result.errors).sort()).toEqual(['name', 'size', 'startingCount']);
   });
 });
 
@@ -138,47 +128,45 @@ describe('newProductDraft', () => {
 });
 
 describe('productFormValues', () => {
-  it('prefills the edit form from a product, keeping the unit from its label', () => {
+  it('prefills the edit form, showing the size in the household unit', () => {
     expect(
       productFormValues(
-        { name: 'Kibble', brand: 'Acme', category: 'dry', baseUnit: 'g', packageAmount: 5443, packageLabel: '12 lb' },
-        'kg',
+        { name: 'Kibble', brand: 'Acme', category: 'dry', container: 'bag', size: { amount: 7257, unit: 'g' } },
+        'lb',
       ),
     ).toEqual({
       mode: 'edit',
       name: 'Kibble',
       brand: 'Acme',
       category: 'dry',
-      baseUnit: 'g',
-      packageSize: '12',
-      packageUnit: 'lb',
-      startingPackages: '',
+      container: 'bag',
+      sizeValue: '16',
+      sizeUnit: 'lb',
+      startingCount: '',
     });
   });
 
-  it('round-trips: saving the prefilled form leaves the package amount unchanged', () => {
-    for (const [packageAmount, packageLabel] of [
-      [5443, '12 lb'],
-      [156, '5.5 oz'],
-      [390, '13.2 fl oz'],
-      [1, '1 ct'],
-    ] as const) {
-      const baseUnit = packageLabel.endsWith('fl oz') ? 'ml' : packageLabel.endsWith('ct') ? 'count' : 'g';
-      const values = productFormValues(
-        { name: 'X', brand: '', category: 'dry', baseUnit, packageAmount, packageLabel },
-        'lb',
-      );
-      const result = validateProductForm(values);
-      expect(result.ok && result.fields.packageAmount).toBe(packageAmount);
-    }
-  });
-
-  it("falls back to the household's default unit when the label isn't recognised", () => {
+  it("leaves the size blank and starts on the container's default unit when there is none", () => {
     const values = productFormValues(
-      { name: 'X', brand: '', category: 'dry', baseUnit: 'g', packageAmount: 2000, packageLabel: 'big bag' },
+      { name: 'Pate', brand: '', category: 'pate', container: 'can', size: null },
       'kg',
     );
-    expect(values.packageUnit).toBe('kg');
-    expect(values.packageSize).toBe('2');
+    expect(values.sizeValue).toBe('');
+    expect(values.sizeUnit).toBe('g');
+  });
+
+  it('round-trips: saving the prefilled form leaves the size unchanged', () => {
+    for (const size of [
+      { amount: 85, unit: 'g' },
+      { amount: 156, unit: 'g' },
+      { amount: 7257, unit: 'g' },
+      { amount: 355, unit: 'ml' },
+    ] as const) {
+      for (const preferred of ['lb', 'kg'] as const) {
+        const values = productFormValues({ name: 'X', brand: '', category: 'wet', container: 'can', size }, preferred);
+        const result = validateProductForm(values);
+        expect(result.ok && result.fields.size).toEqual(size);
+      }
+    }
   });
 });

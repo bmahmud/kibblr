@@ -5,7 +5,6 @@ import { useToast } from '@/components/toast';
 import { useSignedIn } from '@/features/auth/auth-provider';
 
 import { inventoryErrorMessage } from './errors';
-import { usePreferredWeightUnit } from './hooks';
 import { stockChangeMessage } from './messages';
 import { applyStockChange, setOnHand } from './stock';
 import type { StockChangeResult } from './stock';
@@ -16,7 +15,6 @@ import type { StockChangeResult } from './stock';
  */
 export function useStockActions() {
   const { user, householdId } = useSignedIn();
-  const unit = usePreferredWeightUnit();
   const toast = useToast();
   const ctx = { householdId, uid: user.uid };
 
@@ -37,7 +35,7 @@ export function useStockActions() {
   async function run(write: () => Promise<StockChangeResult>, method: EventMethod) {
     try {
       const result = await write();
-      const message = stockChangeMessage(result.change, result.product, unit);
+      const message = stockChangeMessage(result.change, result.product);
       toast.show(
         result.eventId === null
           ? { message }
@@ -51,7 +49,7 @@ export function useStockActions() {
   }
 
   return {
-    /** Adds (positive) or removes (negative) base units. */
+    /** Adds (positive) or removes (negative) packages. */
     change: (productId: string, delta: number, method: EventMethod = 'manual') =>
       run(() => applyStockChange(ctx, { productId, delta, method }), method),
     setOnHand: (productId: string, target: number) => run(() => setOnHand(ctx, { productId, target }), 'manual'),

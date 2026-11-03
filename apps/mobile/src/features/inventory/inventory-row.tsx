@@ -1,4 +1,4 @@
-import { formatAmount } from '@kibblr/core';
+import { CONTAINER_LABELS, formatCount, formatSize } from '@kibblr/core';
 import type { Product, StockStatus, WeightUnit, WithId } from '@kibblr/core';
 import { Link } from 'expo-router';
 import { Pressable, Text, View } from 'react-native';
@@ -12,7 +12,7 @@ type Props = {
   product: WithId<Product>;
   status: StockStatus;
   unit: WeightUnit;
-  /** One package either way (the swipe step). */
+  /** One package either way (the swipe step). `unit` is only for the size line. */
   onAdd: () => void;
   onUse: () => void;
 };
@@ -24,13 +24,17 @@ type Props = {
  */
 export function InventoryRow({ product, status, unit, onAdd, onUse }: Props) {
   const { colors, spacing, typography, touchTarget } = useTheme();
-  const onHand = formatAmount(product.onHand, product.baseUnit, unit);
+  const onHand = formatCount(product.onHand, product.container);
+  const one = CONTAINER_LABELS[product.container].one;
+  const subtitle = [product.brand, product.size ? `${formatSize(product.size, unit)} ${one}` : null]
+    .filter(Boolean)
+    .join(' · ');
 
   function action(label: string, color: string, onPress: () => void, methods: SwipeableMethods) {
     return (
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={`${label} ${product.packageLabel}`}
+        accessibilityLabel={`${label} 1 ${one}`}
         onPress={() => {
           methods.close();
           onPress();
@@ -42,9 +46,9 @@ export function InventoryRow({ product, status, unit, onAdd, onUse }: Props) {
           backgroundColor: color,
           opacity: pressed ? 0.8 : 1,
         })}>
-        <Text style={[typography.title, { color: colors.onPrimary }]}>{label === 'Add' ? '+' : '−'}</Text>
+        <Text style={[typography.title, { color: colors.onPrimary }]}>{label === 'Add' ? '+1' : '−1'}</Text>
         <Text style={[typography.caption, { color: colors.onPrimary }]} numberOfLines={1}>
-          {product.packageLabel}
+          {one}
         </Text>
       </Pressable>
     );
@@ -62,11 +66,11 @@ export function InventoryRow({ product, status, unit, onAdd, onUse }: Props) {
       <Link href={{ pathname: '/product/[id]', params: { id: product.id } }} asChild>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={`${product.name}${product.brand ? `, ${product.brand}` : ''}, ${onHand} on hand, ${status}`}
+          accessibilityLabel={`${product.name}${subtitle ? `, ${subtitle}` : ''}, ${onHand} on hand, ${status}`}
           accessibilityHint="Opens the product. Swipe for quick add or use."
           accessibilityActions={[
-            { name: 'increment', label: `Add ${product.packageLabel}` },
-            { name: 'decrement', label: `Use ${product.packageLabel}` },
+            { name: 'increment', label: `Add 1 ${one}` },
+            { name: 'decrement', label: `Use 1 ${one}` },
           ]}
           onAccessibilityAction={(event) => {
             if (event.nativeEvent.actionName === 'increment') {
@@ -90,9 +94,9 @@ export function InventoryRow({ product, status, unit, onAdd, onUse }: Props) {
             <Text style={[typography.bodyStrong, { color: colors.text }]} numberOfLines={1}>
               {product.name}
             </Text>
-            {product.brand ? (
+            {subtitle ? (
               <Text style={[typography.caption, { color: colors.textMuted }]} numberOfLines={1}>
-                {product.brand}
+                {subtitle}
               </Text>
             ) : null}
           </View>

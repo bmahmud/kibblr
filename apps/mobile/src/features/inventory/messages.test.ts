@@ -2,36 +2,38 @@ import { computeAdjustment, computeStockChange } from '@kibblr/core';
 
 import { stockChangeMessage } from './messages';
 
-const kibble = { name: 'Kibble', baseUnit: 'g' as const };
+const pate = { name: 'Salmon Feast', container: 'can' as const };
+const kibble = { name: 'Kibble', container: 'bag' as const };
 
 describe('stockChangeMessage', () => {
-  it('describes an add', () => {
-    const change = computeStockChange({ onHand: 0, delta: 5443, baseUnit: 'g' });
-    expect(stockChangeMessage(change, kibble, 'lb')).toBe('Added 12 lb of Kibble.');
+  it('describes an add in packages', () => {
+    expect(stockChangeMessage(computeStockChange({ onHand: 0, delta: 12 }), pate)).toBe('Added 12 cans of Salmon Feast.');
+    expect(stockChangeMessage(computeStockChange({ onHand: 0, delta: 1 }), pate)).toBe('Added 1 can of Salmon Feast.');
   });
 
   it('describes a remove', () => {
-    const change = computeStockChange({ onHand: 5443, delta: -454, baseUnit: 'g' });
-    expect(stockChangeMessage(change, kibble, 'lb')).toBe('Used 1 lb of Kibble.');
+    expect(stockChangeMessage(computeStockChange({ onHand: 12, delta: -1 }), pate)).toBe('Used 1 can of Salmon Feast.');
+    expect(stockChangeMessage(computeStockChange({ onHand: 2, delta: -0.5 }), kibble)).toBe('Used 0.5 bags of Kibble.');
   });
 
   it('tells me when a remove was clamped to what was on hand', () => {
-    const change = computeStockChange({ onHand: 150, delta: -5443, baseUnit: 'g' });
-    expect(stockChangeMessage(change, kibble, 'lb')).toBe('Only 5.3 oz was on hand. Kibble is now empty.');
+    expect(stockChangeMessage(computeStockChange({ onHand: 1, delta: -3 }), pate)).toBe(
+      'Only 1 can was on hand. Salmon Feast is now empty.',
+    );
+    expect(stockChangeMessage(computeStockChange({ onHand: 0.5, delta: -1 }), kibble)).toBe(
+      'Only 0.5 bags were on hand. Kibble is now empty.',
+    );
   });
 
   it('tells me when there was nothing to remove', () => {
-    const change = computeStockChange({ onHand: 0, delta: -100, baseUnit: 'g' });
-    expect(stockChangeMessage(change, kibble, 'lb')).toBe('Kibble has nothing on hand.');
+    expect(stockChangeMessage(computeStockChange({ onHand: 0, delta: -1 }), pate)).toBe('Salmon Feast has nothing on hand.');
   });
 
   it('describes an adjustment', () => {
-    const change = computeAdjustment({ onHand: 100, target: 2000, baseUnit: 'g' });
-    expect(stockChangeMessage(change, kibble, 'kg')).toBe('Kibble set to 2 kg.');
+    expect(stockChangeMessage(computeAdjustment({ onHand: 4, target: 10 }), pate)).toBe('Salmon Feast set to 10 cans.');
   });
 
   it('describes a no-op adjustment', () => {
-    const change = computeAdjustment({ onHand: 3, target: 3, baseUnit: 'count' });
-    expect(stockChangeMessage(change, { name: 'Pate', baseUnit: 'count' }, 'lb')).toBe('Pate is unchanged.');
+    expect(stockChangeMessage(computeAdjustment({ onHand: 3, target: 3 }), pate)).toBe('Salmon Feast is unchanged.');
   });
 });

@@ -23,10 +23,9 @@ export const productPath = (householdId: string, productId: string) =>
 
 /**
  * Fields an edit may change. `onHand` is left out on purpose: every stock
- * change goes through `applyStockChange` (spec D4). `baseUnit` is fixed once
- * a product exists, because its events are recorded in that unit.
+ * change goes through `applyStockChange` (spec D4).
  */
-export type ProductPatch = Partial<Omit<Product, 'onHand' | 'baseUnit' | 'createdAt' | 'updatedAt'>>;
+export type ProductPatch = Partial<Omit<Product, 'onHand' | 'createdAt' | 'updatedAt'>>;
 
 function toError(error: unknown): Error {
   return error instanceof Error ? error : new Error(String(error));
@@ -95,9 +94,9 @@ export async function createProduct(householdId: string, draft: ProductDraft): P
 }
 
 export async function updateProduct(householdId: string, productId: string, patch: ProductPatch): Promise<void> {
-  // The type already excludes these; this guards against a cast slipping through.
-  if ('onHand' in patch || 'baseUnit' in patch) {
-    throw new Error('updateProduct cannot change onHand or baseUnit.');
+  // The type already excludes it; this guards against a cast slipping through.
+  if ('onHand' in patch) {
+    throw new Error('updateProduct cannot change onHand.');
   }
   await updateDoc(productPath(householdId, productId), { ...patch, updatedAt: serverTimestamp() });
 }

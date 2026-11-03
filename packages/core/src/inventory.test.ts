@@ -12,8 +12,7 @@ function product(overrides: Partial<InventoryProduct> & { id?: string } = {}): I
     name: 'Chicken Kibble',
     brand: 'Acme',
     category: 'dry',
-    onHand: 4000,
-    packageAmount: 5443,
+    onHand: 4,
     dailyUsage: null,
     lowStock: null,
     archived: false,
@@ -27,11 +26,11 @@ describe('runwayDays', () => {
   });
 
   it('divides on hand by daily usage', () => {
-    expect(runwayDays(product({ onHand: 900, dailyUsage: 100 }))).toBe(9);
+    expect(runwayDays(product({ onHand: 9, dailyUsage: 1 }))).toBe(9);
   });
 
   it('is zero when out', () => {
-    expect(runwayDays(product({ onHand: 0, dailyUsage: 100 }))).toBe(0);
+    expect(runwayDays(product({ onHand: 0, dailyUsage: 1 }))).toBe(0);
   });
 });
 
@@ -42,19 +41,19 @@ describe('stockStatus', () => {
   });
 
   describe('days mode (household default)', () => {
-    it('falls back to a quarter of a package when there is no runway', () => {
-      // 25% of 5443 g = 1360.75 g
-      expect(stockStatus(product({ onHand: 1360 }), settings)).toBe('low');
-      expect(stockStatus(product({ onHand: 1361 }), settings)).toBe('ok');
+    it('falls back to the last package when there is no runway', () => {
+      expect(stockStatus(product({ onHand: 1 }), settings)).toBe('low');
+      expect(stockStatus(product({ onHand: 0.5 }), settings)).toBe('low');
+      expect(stockStatus(product({ onHand: 1.01 }), settings)).toBe('ok');
     });
 
     it('uses runway against the household default days when daily usage is known', () => {
-      expect(stockStatus(product({ onHand: 700, dailyUsage: 100 }), settings)).toBe('low'); // 7 days
-      expect(stockStatus(product({ onHand: 800, dailyUsage: 100 }), settings)).toBe('ok'); // 8 days
+      expect(stockStatus(product({ onHand: 14, dailyUsage: 2 }), settings)).toBe('low'); // 7 days
+      expect(stockStatus(product({ onHand: 16, dailyUsage: 2 }), settings)).toBe('ok'); // 8 days
     });
 
     it("uses the product's own day count over the household default", () => {
-      const p = product({ onHand: 800, dailyUsage: 100, lowStock: { mode: 'days', value: 10 } });
+      const p = product({ onHand: 16, dailyUsage: 2, lowStock: { mode: 'days', value: 10 } });
       expect(stockStatus(p, settings)).toBe('low');
     });
   });
@@ -70,10 +69,10 @@ describe('stockStatus', () => {
 
 describe('groupInventory', () => {
   const items = [
-    product({ id: 'ok-b', name: 'Beef Bites', onHand: 5000 }),
-    product({ id: 'low', name: 'Turkey Pate', onHand: 100, category: 'wet', brand: 'Purr' }),
+    product({ id: 'ok-b', name: 'Beef Bites', onHand: 5 }),
+    product({ id: 'low', name: 'Turkey Pate', onHand: 1, category: 'pate', brand: 'Purr' }),
     product({ id: 'out', name: 'Zesty Treats', onHand: 0, category: 'treat' }),
-    product({ id: 'ok-a', name: 'apple crunch', onHand: 5000, category: 'treat' }),
+    product({ id: 'ok-a', name: 'apple crunch', onHand: 5, category: 'treat' }),
     product({ id: 'archived', name: 'Old Food', onHand: 0, archived: true }),
   ];
 
@@ -94,6 +93,11 @@ describe('groupInventory', () => {
     const { lowOrOut, ok } = groupInventory(items, settings, { category: 'treat' });
     expect(lowOrOut.map((i) => i.product.id)).toEqual(['out']);
     expect(ok.map((i) => i.product.id)).toEqual(['ok-a']);
+  });
+
+  it('filters by the pate category', () => {
+    const { lowOrOut, ok } = groupInventory(items, settings, { category: 'pate' });
+    expect([...lowOrOut, ...ok].map((i) => i.product.id)).toEqual(['low']);
   });
 
   it('returns empty groups for no products', () => {

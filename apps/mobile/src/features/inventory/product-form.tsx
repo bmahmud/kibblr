@@ -1,5 +1,13 @@
-import { CATEGORIES, defaultInputUnit, validateProductForm } from '@kibblr/core';
-import type { BaseUnit, Category, ProductFields, ProductFormErrors, ProductFormInput, WeightUnit } from '@kibblr/core';
+import { CATEGORIES, CONTAINERS, CONTAINER_LABELS, defaultContainer, defaultSizeUnit, validateProductForm } from '@kibblr/core';
+import type {
+  Category,
+  Container,
+  DisplayUnit,
+  ProductFields,
+  ProductFormErrors,
+  ProductFormInput,
+  WeightUnit,
+} from '@kibblr/core';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, Text, View } from 'react-native';
 
@@ -12,34 +20,47 @@ import { useTheme } from '@/theme';
 const CATEGORY_LABELS: Record<Category, string> = {
   dry: 'Dry',
   wet: 'Wet',
+  pate: 'Pate',
   treat: 'Treat',
   supplement: 'Supplement',
   other: 'Other',
 };
 
-const MEASURES: { value: BaseUnit; label: string }[] = [
-  { value: 'g', label: 'By weight' },
-  { value: 'ml', label: 'By volume' },
-  { value: 'count', label: 'By count' },
-];
+const CONTAINER_OPTIONS = CONTAINERS.map((value) => ({
+  value,
+  label: CONTAINER_LABELS[value].one[0]?.toUpperCase() + CONTAINER_LABELS[value].one.slice(1),
+}));
+
+/** The household's own units first. */
+const SIZE_UNITS: Record<WeightUnit, readonly DisplayUnit[]> = {
+  lb: ['oz', 'lb', 'floz', 'cup', 'g', 'kg', 'ml'],
+  kg: ['g', 'kg', 'ml', 'oz', 'lb', 'floz', 'cup'],
+};
 
 type Props = {
   initial: ProductFormInput;
   unit: WeightUnit;
   submitLabel: string;
-  onSubmit: (fields: ProductFields, startingAmount: number) => Promise<void>;
+  onSubmit: (fields: ProductFields, startingCount: number) => Promise<void>;
 };
 
-/** New and Edit product (spec section 6.4). The base unit is fixed once a product exists. */
+/** New and Edit product (spec section 6.4). Stock is counted in packages; the size is just for reference. */
 export function ProductForm({ initial, unit, submitLabel, onSubmit }: Props) {
   const { colors, spacing, typography } = useTheme();
   const [form, setForm] = useState<ProductFormInput>(initial);
   const [errors, setErrors] = useState<ProductFormErrors>({});
   const [saving, setSaving] = useState(false);
+  // A new product's container follows its type until it is picked by hand.
+  const [containerPicked, setContainerPicked] = useState(initial.mode === 'edit');
   const creating = form.mode === 'create';
+  const container = CONTAINER_LABELS[form.container];
 
   function update(patch: Partial<ProductFormInput>) {
     setForm((current) => ({ ...current, ...patch }));
+  }
+
+  function changeContainer(next: Container) {
+    update(form.sizeValue.trim() ? { container: next } : { container: next, sizeUnit: defaultSizeUnit(next, unit) });
   }
 
   async function submit() {
@@ -51,7 +72,7 @@ export function ProductForm({ initial, unit, submitLabel, onSubmit }: Props) {
     setErrors({});
     setSaving(true);
     try {
-      await onSubmit(result.fields, result.startingAmount);
+      await onSubmit(result.fields, result.startingCount);
     } finally {
       setSaving(false);
     }
@@ -69,7 +90,7 @@ export function ProductForm({ initial, unit, submitLabel, onSubmit }: Props) {
           value={form.name}
           onChangeText={(name) => update({ name })}
           error={errors.name}
-          placeholder="Chicken & Rice"
+          placeholder="Salmon Feast"
           autoCapitalize="words"
         />
         <TextField
@@ -81,48 +102,51 @@ export function ProductForm({ initial, unit, submitLabel, onSubmit }: Props) {
         />
 
         <View style={{ gap: spacing.xs }}>
-          <Text style={[typography.caption, { color: colors.textMuted }]}>Category</Text>
+          <Text style={[typography.caption, { color: colors.textMuted }]}>Type</Text>
           <Chips
-            label="Category"
+            label="Type"
             options={CATEGORIES.map((value) => ({ value, label: CATEGORY_LABELS[value] }))}
             selected={form.category}
-            onSelect={(category) => update({ category })}
+            onSelect={(category) => {
+              update({ category });
+              if (!containerPicked) {
+                changeContainer(defaultContainer(category));
+              }
+            }}
           />
         </View>
 
         <View style={{ gap: spacing.xs }}>
-          <Text style={[typography.caption, { color: colors.textMuted }]}>Measured</Text>
+          <Text style={[typography.caption, { color: colors.textMuted }]}>Comes in a</Text>
           <Chips
-            label="Measured"
-            options={MEASURES}
-            selected={form.baseUnit}
-            disabled={!creating}
-            onSelect={(baseUnit) => update({ baseUnit, packageUnit: defaultInputUnit(baseUnit, unit) })}
+            label="Comes in a"
+            scroll
+            options={CONTAINER_OPTIONS}
+            selected={form.container}
+            onSelect={(next) => {
+              setContainerPicked(true);
+              changeContainer(next);
+            }}
           />
-          {creating ? null : (
-            <Text style={[typography.caption, { color: colors.textMuted }]}>
-              Fixed once a product exists, so its history stays in one unit.
-            </Text>
-          )}
         </View>
 
         <AmountInput
-          label={form.baseUnit === 'count' ? 'Items per package' : 'Package size'}
-          baseUnit={form.baseUnit}
-          value={form.packageSize}
-          onChangeValue={(packageSize) => update({ packageSize })}
-          unit={form.packageUnit}
-          onChangeUnit={(packageUnit) => update({ packageUnit })}
-          error={errors.packageSize}
-          placeholder={form.baseUnit === 'count' ? '1' : '12'}
+          label={`Size of one ${container.one} (optional)`}
+          units={SIZE_UNITS[unit]}
+          value={form.sizeValue}
+          onChangeValue={(sizeValue) => update({ sizeValue })}
+          unit={form.sizeUnit}
+          onChangeUnit={(sizeUnit) => update({ sizeUnit })}
+          error={errors.size}
+          placeholder={form.container === 'bag' ? '16' : '3'}
         />
 
         {creating ? (
           <TextField
-            label="Packages on hand now"
-            value={form.startingPackages}
-            onChangeText={(startingPackages) => update({ startingPackages })}
-            error={errors.startingPackages}
+            label={`How many ${container.many} on hand now`}
+            value={form.startingCount}
+            onChangeText={(startingCount) => update({ startingCount })}
+            error={errors.startingCount}
             keyboardType="decimal-pad"
             placeholder="0"
           />

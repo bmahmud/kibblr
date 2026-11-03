@@ -36,10 +36,9 @@ export default function EditProductScreen() {
     );
   }
 
-  // The base unit is fixed, so it is not part of the update.
-  async function save({ name, brand, category, packageAmount, packageLabel }: ProductFields) {
+  async function save(fields: ProductFields) {
     try {
-      await updateProduct(householdId, id, { name, brand, category, packageAmount, packageLabel });
+      await updateProduct(householdId, id, fields);
       router.back();
     } catch (error) {
       toast.show({ message: inventoryErrorMessage(error), tone: 'error' });

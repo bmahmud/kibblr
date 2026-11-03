@@ -1,14 +1,14 @@
-import { defaultInputUnit, formatAmount, parseNumber, stockStatus, toBase } from '@kibblr/core';
-import type { DisplayUnit, Product, WithId } from '@kibblr/core';
+import { CONTAINER_LABELS, formatCount, formatSize, parseNumber, roundCount, stockStatus } from '@kibblr/core';
+import type { Product, WithId } from '@kibblr/core';
 import { Link, Stack, router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from 'react-native';
 
-import { AmountInput } from '@/components/amount-input';
 import { Button } from '@/components/button';
 import { EmptyState } from '@/components/empty-state';
 import { NavLink } from '@/components/nav-link';
 import { StatusBadge } from '@/components/status-badge';
+import { TextField } from '@/components/text-field';
 import { useToast } from '@/components/toast';
 import { useSignedIn } from '@/features/auth/auth-provider';
 import { inventoryErrorMessage } from '@/features/inventory/errors';
@@ -51,10 +51,9 @@ function ProductDetail({ product }: { product: WithId<Product> }) {
   const events = useEvents({ productId: product.id, max: 20 });
 
   const [amount, setAmount] = useState('');
-  const [chosenUnit, setChosenUnit] = useState<DisplayUnit | null>(null);
   const [amountError, setAmountError] = useState<string | undefined>(undefined);
   const [busy, setBusy] = useState(false);
-  const amountUnit = chosenUnit ?? defaultInputUnit(product.baseUnit, unit);
+  const label = CONTAINER_LABELS[product.container];
 
   async function step(delta: number) {
     setBusy(true);
@@ -65,18 +64,20 @@ function ProductDetail({ product }: { product: WithId<Product> }) {
   async function applyAmount(kind: 'add' | 'use' | 'set') {
     const value = parseNumber(amount);
     if (value === null) {
-      setAmountError('Enter an amount, like 2 or 0.5.');
+      setAmountError('Enter a number, like 2 or 0.5.');
       return;
     }
-    const base = toBase(value, amountUnit);
-    if (kind !== 'set' && base === 0) {
-      setAmountError('Enter an amount more than 0.');
+    const count = roundCount(value);
+    if (kind !== 'set' && count === 0) {
+      setAmountError('Enter a number more than 0.');
       return;
     }
     setAmountError(undefined);
     setBusy(true);
     const result =
-      kind === 'set' ? await actions.setOnHand(product.id, base) : await actions.change(product.id, kind === 'add' ? base : -base);
+      kind === 'set'
+        ? await actions.setOnHand(product.id, count)
+        : await actions.change(product.id, kind === 'add' ? count : -count);
     setBusy(false);
     if (result) {
       setAmount('');
@@ -134,39 +135,37 @@ function ProductDetail({ product }: { product: WithId<Product> }) {
           {product.brand ? <Text style={[typography.body, { color: colors.textMuted }]}>{product.brand}</Text> : null}
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
             <Text style={[typography.display, { color: colors.text }]} accessibilityLabel="On hand">
-              {formatAmount(product.onHand, product.baseUnit, unit)}
+              {formatCount(product.onHand, product.container)}
             </Text>
             <StatusBadge status={stockStatus(product, settings)} />
           </View>
           <Text style={[typography.caption, { color: colors.textMuted }]}>
-            on hand · package is {product.packageLabel}
+            {product.size ? `on hand · ${formatSize(product.size, unit)} ${label.one}` : 'on hand'}
           </Text>
         </View>
 
         <View style={{ flexDirection: 'row', gap: spacing.md }}>
           <View style={{ flex: 1 }}>
             <Button
-              label={`− ${product.packageLabel}`}
+              label={`− 1 ${label.one}`}
               variant="secondary"
-              onPress={() => void step(-product.packageAmount)}
+              onPress={() => void step(-1)}
               disabled={busy || product.onHand === 0}
             />
           </View>
           <View style={{ flex: 1 }}>
-            <Button label={`+ ${product.packageLabel}`} onPress={() => void step(product.packageAmount)} disabled={busy} />
+            <Button label={`+ 1 ${label.one}`} onPress={() => void step(1)} disabled={busy} />
           </View>
         </View>
 
         <View style={section}>
           <Text style={[typography.bodyStrong, { color: colors.text }]}>Custom amount</Text>
-          <AmountInput
-            label="Amount"
-            baseUnit={product.baseUnit}
+          <TextField
+            label={`Number of ${label.many}`}
             value={amount}
-            onChangeValue={setAmount}
-            unit={amountUnit}
-            onChangeUnit={setChosenUnit}
+            onChangeText={setAmount}
             error={amountError}
+            keyboardType="decimal-pad"
             placeholder="0"
           />
           <View style={{ flexDirection: 'row', gap: spacing.sm }}>
@@ -195,7 +194,7 @@ function ProductDetail({ product }: { product: WithId<Product> }) {
           ) : null}
           {events.status === 'ready'
             ? events.data.map((event) => (
-                <EventRow key={event.id} event={event} baseUnit={product.baseUnit} unit={unit} />
+                <EventRow key={event.id} event={event} container={product.container} />
               ))
             : null}
           <NavLink href={{ pathname: '/history', params: { productId: product.id } }} label="Full history" />

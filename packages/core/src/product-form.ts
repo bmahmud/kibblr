@@ -1,16 +1,7 @@
-import type { Category, Product } from './schemas';
-import {
-  DISPLAY_UNITS,
-  UNIT_LABELS,
-  baseUnitOf,
-  defaultInputUnit,
-  formatNumber,
-  fromBase,
-  parseNumber,
-  roundBase,
-  toBase,
-} from './units';
-import type { BaseUnit, DisplayUnit } from './units';
+import { roundCount } from './count';
+import type { Category, Container, Product } from './schemas';
+import { baseUnitOf, defaultSizeUnit, formatNumber, fromBase, parseNumber, sizeDisplayUnit, toBase } from './units';
+import type { DisplayUnit } from './units';
 
 /** Raw text from the New / Edit product form. */
 export type ProductFormInput = {
@@ -18,20 +9,21 @@ export type ProductFormInput = {
   name: string;
   brand: string;
   category: Category;
-  baseUnit: BaseUnit;
-  packageSize: string;
-  packageUnit: DisplayUnit;
+  container: Container;
+  /** Size of one package. Optional: empty means not entered. */
+  sizeValue: string;
+  sizeUnit: DisplayUnit;
   /** Create only: packages on hand right now. Empty means 0. */
-  startingPackages: string;
+  startingCount: string;
 };
 
-export type ProductFormErrors = Partial<Record<'name' | 'brand' | 'packageSize' | 'startingPackages', string>>;
+export type ProductFormErrors = Partial<Record<'name' | 'brand' | 'size' | 'startingCount', string>>;
 
 /** The fields the form edits. */
-export type ProductFields = Pick<Product, 'name' | 'brand' | 'category' | 'baseUnit' | 'packageAmount' | 'packageLabel'>;
+export type ProductFields = Pick<Product, 'name' | 'brand' | 'category' | 'container' | 'size'>;
 
 export type ProductFormResult =
-  | { ok: true; fields: ProductFields; startingAmount: number }
+  | { ok: true; fields: ProductFields; startingCount: number }
   | { ok: false; errors: ProductFormErrors };
 
 export function validateProductForm(input: ProductFormInput): ProductFormResult {
@@ -49,45 +41,38 @@ export function validateProductForm(input: ProductFormInput): ProductFormResult 
     errors.brand = 'Keep the brand under 80 characters.';
   }
 
-  let packageAmount = 0;
-  const size = parseNumber(input.packageSize);
-  if (baseUnitOf(input.packageUnit) !== input.baseUnit) {
-    errors.packageSize = 'Pick a unit for the package size.';
-  } else if (!input.packageSize.trim()) {
-    errors.packageSize = 'Enter the package size.';
-  } else if (size === null) {
-    errors.packageSize = 'Enter a number, like 12 or 5.5.';
-  } else {
-    packageAmount = toBase(size, input.packageUnit);
-    if (packageAmount <= 0) {
-      errors.packageSize = 'The package size must be more than 0.';
-    }
-  }
-
-  let packages = 0;
-  if (input.mode === 'create' && input.startingPackages.trim()) {
-    const parsed = parseNumber(input.startingPackages);
-    if (parsed === null) {
-      errors.startingPackages = 'Enter 0 or more packages.';
+  let size: ProductFields['size'] = null;
+  if (input.sizeValue.trim()) {
+    const value = parseNumber(input.sizeValue);
+    if (value === null) {
+      errors.size = 'Enter a number, like 3 or 5.5, or leave it blank.';
     } else {
-      packages = parsed;
+      const amount = toBase(value, input.sizeUnit);
+      if (amount <= 0) {
+        errors.size = 'The size must be more than 0.';
+      } else {
+        size = { amount, unit: baseUnitOf(input.sizeUnit) };
+      }
     }
   }
 
-  if (Object.keys(errors).length > 0 || size === null) {
+  let startingCount = 0;
+  if (input.mode === 'create' && input.startingCount.trim()) {
+    const parsed = parseNumber(input.startingCount);
+    if (parsed === null) {
+      errors.startingCount = 'Enter 0 or more, like 12 or 1.5.';
+    } else {
+      startingCount = roundCount(parsed);
+    }
+  }
+
+  if (Object.keys(errors).length > 0) {
     return { ok: false, errors };
   }
   return {
     ok: true,
-    fields: {
-      name,
-      brand,
-      category: input.category,
-      baseUnit: input.baseUnit,
-      packageAmount,
-      packageLabel: `${formatNumber(size)} ${UNIT_LABELS[input.packageUnit]}`,
-    },
-    startingAmount: roundBase(packages * packageAmount, input.baseUnit),
+    fields: { name, brand, category: input.category, container: input.container, size },
+    startingCount,
   };
 }
 
@@ -113,22 +98,27 @@ export function newProductDraft(fields: ProductFields): ProductDraft {
 }
 
 /**
- * The edit form's starting values. The unit comes from the label the product
- * was saved with ("12 lb"), so it reopens the way it was entered.
+ * The edit form's starting values. The size shows in the household's unit
+ * ("3 oz"); if that rounding would change it on save, it shows in g or ml.
  */
 export function productFormValues(product: ProductFields, preferred: 'lb' | 'kg'): ProductFormInput {
-  const fromLabel = DISPLAY_UNITS[product.baseUnit].find((unit) =>
-    product.packageLabel.endsWith(` ${UNIT_LABELS[unit]}`),
-  );
-  const unit = fromLabel ?? defaultInputUnit(product.baseUnit, preferred);
+  let sizeValue = '';
+  let sizeUnit = defaultSizeUnit(product.container, preferred);
+  if (product.size) {
+    const unit = sizeDisplayUnit(product.size, preferred);
+    const text = formatNumber(fromBase(product.size.amount, unit));
+    const exact = toBase(Number(text), unit) === product.size.amount;
+    sizeUnit = exact ? unit : product.size.unit;
+    sizeValue = exact ? text : String(product.size.amount);
+  }
   return {
     mode: 'edit',
     name: product.name,
     brand: product.brand,
     category: product.category,
-    baseUnit: product.baseUnit,
-    packageSize: formatNumber(fromBase(product.packageAmount, unit)),
-    packageUnit: unit,
-    startingPackages: '',
+    container: product.container,
+    sizeValue,
+    sizeUnit,
+    startingCount: '',
   };
 }

@@ -3,17 +3,19 @@ export {
   DISPLAY_UNITS,
   UNIT_LABELS,
   baseUnitOf,
-  defaultInputUnit,
-  formatAmount,
-  formatDelta,
+  defaultSizeUnit,
   formatNumber,
+  formatSize,
   fromBase,
   isBaseUnit,
   parseNumber,
   roundBase,
+  sizeDisplayUnit,
   toBase,
 } from './units';
-export type { BaseUnit, DisplayUnit } from './units';
+export type { BaseUnit, DisplayUnit, Size } from './units';
+
+export { CONTAINER_LABELS, defaultContainer, formatCount, formatCountDelta, roundCount } from './count';
 
 export * from './schemas';
 

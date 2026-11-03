@@ -6,7 +6,7 @@ import { Button } from '@/components/button';
 import { Chips } from '@/components/chips';
 import { EmptyState } from '@/components/empty-state';
 import { EventRow } from '@/features/inventory/event-row';
-import { useEvents, usePreferredWeightUnit, useProducts } from '@/features/inventory/hooks';
+import { useEvents, useProducts } from '@/features/inventory/hooks';
 import { useTheme } from '@/theme';
 
 const PAGE = 50;
@@ -15,9 +15,8 @@ const PAGE = 50;
 export default function HistoryScreen() {
   const { productId } = useLocalSearchParams<{ productId?: string }>();
   const { colors, spacing } = useTheme();
-  const unit = usePreferredWeightUnit();
   const [max, setMax] = useState(PAGE);
-  // Archived products too, so their old events still have names and units.
+  // Archived products too, so their old events still have names and containers.
   const products = useProducts({ includeArchived: true });
   const events = useEvents({ productId: productId ?? null, max });
 
@@ -66,12 +65,11 @@ export default function HistoryScreen() {
       }
       renderItem={({ item }) => {
         const product = byId.get(item.productId);
-        // Units come from the product; while products load, rows wait rather than guess.
+        // Containers come from the product; while products load, rows wait rather than guess.
         return product ? (
           <EventRow
             event={item}
-            baseUnit={product.baseUnit}
-            unit={unit}
+            container={product.container}
             productName={productId ? undefined : product.name}
           />
         ) : null;
