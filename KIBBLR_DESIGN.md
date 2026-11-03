@@ -97,10 +97,11 @@ kibblr/
 
 ## 4. Domain concepts
 
-- **Product**: a specific food (brand + name + package size), optionally linked to a barcode.
-- **On hand**: remaining quantity of a product, stored in the product's **base unit**.
-- **Base unit**: one of `g` (weight), `ml` (volume), `count` (cans, pouches, treats). All math is done in base units; the UI converts to lb/oz/cups for display and input. Avoids float drift and mixed-unit bugs.
-- **Package size**: base-unit amount added by one scan (e.g. 12 lb bag = 5443 g). For multipacks, the scan screen has a quantity multiplier (x1, x12, custom).
+- **Product**: a specific food (brand + name + type), optionally linked to a barcode. Types: dry, wet, pate, treat, supplement, other.
+- **Container**: what one package is: can, pouch, tray, bag, box, tub, bottle or item.
+- **On hand**: how many packages of a product I have ("12 cans", "1.5 bags"), never its weight. Stored as a number of packages rounded to hundredths, so float drift never accumulates.
+- **Size**: optional net weight or volume of one package (e.g. a 3 oz can), stored in `g` or `ml` and shown in lb/oz/fl oz or kg/g/ml. Reference only; no stock math uses it.
+- **Scan step**: one scan adds one package. For multipacks, the scan screen has a quantity multiplier (x1, x12, custom).
 - **Event**: immutable ledger entry for every stock change. History and consumption-rate learning are built on it.
 - **Rating**: a pet's reaction to a product (loved / ok / refused) with an optional comment.
 - **Verdict**: my explicit decision on a product: `reorder`, `skip`, or `undecided`. Ratings inform it; I set it.
@@ -109,7 +110,7 @@ kibblr/
 
 ## 5. Data model (Firestore)
 
-All documents live under `households/{hid}`. Timestamps are Firestore `Timestamp`. Amounts are numbers in base units.
+All documents live under `households/{hid}`. Timestamps are Firestore `Timestamp`. Stock amounts are numbers of packages.
 
 ### 5.1 Collections
 
@@ -134,12 +135,11 @@ households/{hid}/products/{productId}
   barcode: string | null               # normalized GTIN-13, null if manual
   name: string
   brand: string
-  category: 'dry' | 'wet' | 'treat' | 'supplement' | 'other'
-  baseUnit: 'g' | 'ml' | 'count'
-  packageAmount: number                # base units per scan
-  packageLabel: string                 # display, e.g. "12 lb bag"
-  onHand: number                       # base units; never negative
-  dailyUsage: number | null            # base units per day, all pets combined
+  category: 'dry' | 'wet' | 'pate' | 'treat' | 'supplement' | 'other'
+  container: 'can' | 'pouch' | 'tray' | 'bag' | 'box' | 'tub' | 'bottle' | 'item'
+  size: { amount: number, unit: 'g' | 'ml' } | null   # one package's net weight/volume, display only
+  onHand: number                       # packages; never negative; hundredths
+  dailyUsage: number | null            # packages per day, all pets combined
   autoDeduct: boolean                  # apply dailyUsage automatically
   lastAutoDeductAt: Timestamp | null
   lowStock: { mode: 'days' | 'amount', value: number } | null   # null = household default
@@ -164,7 +164,7 @@ households/{hid}/events/{eventId}      # append-only
   petId: string | null
   type: 'add' | 'remove' | 'adjust'
   method: 'scan' | 'manual' | 'feeding' | 'auto'
-  delta: number                        # signed, base units
+  delta: number                        # signed, packages
   onHandAfter: number
   note: string | null
   createdAt: Timestamp
@@ -234,9 +234,9 @@ Tabs: **Inventory**, **Shopping**, **Pets**, **Settings**. A floating **Scan** b
 
 ### 6.2 Inventory (home)
 - List of non-archived products grouped by status: **Low / Out**, **OK**.
-- Each row: name, brand, on-hand in friendly units (e.g. "7.2 lb"), runway ("~9 days" when `dailyUsage` is known), verdict badge, pet avatars.
+- Each row: name, brand and size (e.g. "Fancy Feast · 3 oz can"), on-hand count (e.g. "12 cans"), runway ("~9 days" when `dailyUsage` is known), verdict badge, pet avatars.
 - Search and filter by pet and category.
-- Row swipe: quick **-** (use) and **+** (add) with the product's default step.
+- Row swipe: quick **-** (use) and **+** (add) one package.
 - Pull to refresh is unnecessary (live snapshots) but harmless.
 
 ### 6.3 Scanner (`scan.tsx`)
@@ -246,15 +246,16 @@ Tabs: **Inventory**, **Shopping**, **Pets**, **Settings**. A floating **Scan** b
 - Torch toggle, and a **Enter manually** button that opens the manual flow.
 - Flow on scan, after normalizing the code to GTIN-13:
   1. Query `products` where `barcode == code` and `archived == false`.
-  2. **Found + Add mode:** `applyStockChange(+packageAmount * multiplier, method: 'scan')`. Show a toast: "Added 12 lb Brand Food. Undo". Multiplier chip row (x1, x2, x12, custom) stays on screen.
-  3. **Found + Use mode:** default action removes one `dailyUsage` day if known, otherwise opens a quick sheet: `1 serving | 1/4 package | 1/2 package | 1 package | custom`. Applies with `method: 'scan'` and shows Undo.
+  2. **Found + Add mode:** `applyStockChange(+1 * multiplier, method: 'scan')`. Show a toast: "Added 1 can of Salmon Feast. Undo". Multiplier chip row (x1, x2, x12, custom) stays on screen.
+  3. **Found + Use mode:** default action removes one `dailyUsage` day if known, otherwise opens a quick sheet: `1/4 | 1/2 | 1 package | custom`. Applies with `method: 'scan'` and shows Undo.
   4. **Not found:** call the Worker (section 7). On hit, open **New product** prefilled; on miss, open it empty with only the barcode filled. After save, apply the pending add if the mode was Add.
   5. **Use mode + not found:** tell me this barcode is not in inventory; offer to create it.
 - If the Worker is unreachable, fall through to the empty manual form. Scanning must never be blocked by the network.
 
 ### 6.4 Product detail
-- Header: name, brand, image, on-hand, runway.
-- Big **+ / -** buttons plus a free-entry field (units selectable). Every path calls `applyStockChange`.
+- Header: name, brand, image, on-hand count, size, runway.
+- Big **+ / -** buttons (one package) plus a free-entry number of packages (Use, Add, Set on hand). Every path calls `applyStockChange`.
+- New / Edit product: name, brand, type, container (defaults from type: wet and pate → can, dry and treat → bag), optional size, and on create how many are on hand now.
 - **Usage**: daily amount, auto-deduct toggle, which pets eat it.
 - **Low-stock rule**: household default or custom (days / amount).
 - **Feedback**: per-pet rating buttons (loved / ok / refused), comment field, **Verdict** control (Reorder / Skip / Undecided) with a note, optional `reorderUrl`.
@@ -296,7 +297,7 @@ Purpose: hide the third-party API key, normalize results, and cache so each barc
 ### 7.1 Endpoint
 `GET /v1/barcode/:code`
 - Header: `Authorization: Bearer <Firebase ID token>`.
-- `200`: `{ barcode, name, brand, category?, packageAmount?, baseUnit?, packageLabel?, imageUrl?, source, cached }`.
+- `200`: `{ barcode, name, brand, category?, container?, size?: { amount, unit: 'g' | 'ml' }, imageUrl?, source, cached }`.
 - `404`: `{ error: "not_found" }`.
 - `400`: invalid code. `401`: bad token. `502`: all upstreams failed.
 - `GET /health` for a trivial check (no auth).
@@ -326,12 +327,13 @@ All functions are pure and unit-tested.
 
 - `runwayDays(product, learnedRate?)`: `onHand / effectiveRate`; `null` if no rate. `effectiveRate = dailyUsage ?? learnedRate`.
 - `isLow(product, household)`:
-  - mode `days`: `runwayDays <= value` (if runway is null, fall back to `onHand <= packageAmount * 0.25`).
-  - mode `amount`: `onHand <= value`.
+  - mode `days`: `runwayDays <= value` (if runway is null, fall back to `onHand <= 1`: the last package is low).
+  - mode `amount`: `onHand <= value` (packages).
   - Out is `onHand === 0`.
 - `learnedRate(events)`: from `remove` events with method `scan|manual|feeding` over the last 30 days, `sum(delta) / days_covered`. Needs at least 7 days of data; otherwise `null`. Phase 4.
 - `autoDeduct`: on app foreground, for each product with `autoDeduct && dailyUsage`, compute whole days since `lastAutoDeductAt` and call `applyStockChange` once with `method: 'auto'`, then set `lastAutoDeductAt`. Idempotent per day.
-- Unit conversion table (lb, oz, kg, g, cup, fl oz, ml, count) with parse/format helpers and rounding rules (display one decimal; store raw).
+- Package counts: format with container plurals ("1 can", "12 cans", "1.5 bags"); round to hundredths when stored.
+- Size units (lb, oz, kg, g, cup, fl oz, ml) with parse/format helpers: stored as whole g/ml, displayed with one decimal.
 
 ---
 

@@ -25,11 +25,10 @@ const product = {
   name: 'Indoor Adult',
   brand: 'Acme',
   category: 'dry',
-  baseUnit: 'g',
-  packageAmount: 5443,
-  packageLabel: '12 lb bag',
-  onHand: 2721.5,
-  dailyUsage: 80,
+  container: 'bag',
+  size: { amount: 5443, unit: 'g' },
+  onHand: 1.5,
+  dailyUsage: 0.1,
   autoDeduct: false,
   lastAutoDeductAt: null,
   lowStock: null,
@@ -51,8 +50,8 @@ const event = {
   petId: null,
   type: 'remove',
   method: 'manual',
-  delta: -80,
-  onHandAfter: 2641.5,
+  delta: -1,
+  onHandAfter: 11,
   note: null,
   createdAt: now,
   createdBy: 'uid-1',
@@ -106,18 +105,25 @@ describe('productSchema', () => {
     expect(productSchema.safeParse({ ...product, barcode: null, brand: '' }).success).toBe(true);
   });
 
+  it('accepts a product with no size and the pate category', () => {
+    expect(productSchema.safeParse({ ...product, size: null, category: 'pate', container: 'can' }).success).toBe(true);
+  });
+
   it('accepts a custom low-stock rule', () => {
     expect(productSchema.safeParse({ ...product, lowStock: { mode: 'days', value: 5 } }).success).toBe(true);
   });
 
   it.each([
     ['negative onHand', { onHand: -1 }],
-    ['zero packageAmount', { packageAmount: 0 }],
+    ['zero size', { size: { amount: 0, unit: 'g' } }],
+    ['count size unit', { size: { amount: 1, unit: 'count' } }],
+    ['missing container', { container: undefined }],
+    ['unknown container', { container: 'jar' }],
     ['infinite onHand', { onHand: Number.POSITIVE_INFINITY }],
     ['zero dailyUsage', { dailyUsage: 0 }],
     ['12-digit barcode', { barcode: '012345678905' }],
     ['barcode with a letter', { barcode: '00123456789X5' }],
-    ['unknown base unit', { baseUnit: 'lb' }],
+    ['size in a display unit', { size: { amount: 12, unit: 'lb' } }],
     ['unknown category', { category: 'raw' }],
     ['unknown verdict', { verdict: 'maybe' }],
     ['non-http reorder URL', { reorderUrl: 'javascript:alert(1)' }],

@@ -15,6 +15,7 @@ import {
   serverTimestamp,
   setDoc,
   Timestamp,
+  runTransaction,
   updateDoc,
   writeBatch,
 } from 'firebase/firestore';
@@ -50,11 +51,19 @@ const eventData = (createdBy: string) => ({
   petId: null,
   type: 'add',
   method: 'manual',
-  delta: 100,
-  onHandAfter: 100,
+  delta: 12,
+  onHandAfter: 12,
   note: null,
   createdAt: serverTimestamp(),
   createdBy,
+});
+
+/** Just the fields the rules check; the app's Zod schema covers the rest. */
+const productData = (overrides: Record<string, unknown> = {}) => ({
+  name: 'Food',
+  container: 'can',
+  onHand: 12,
+  ...overrides,
 });
 
 /** Seed documents with rules off. */
@@ -66,7 +75,7 @@ async function seedHousehold() {
   await seed(async (fs) => {
     await setDoc(doc(fs, `households/${HID}`), householdData());
     await setDoc(doc(fs, `users/${OWNER}`), { householdId: HID });
-    await setDoc(doc(fs, `households/${HID}/products/prod-1`), { name: 'Food', onHand: 100 });
+    await setDoc(doc(fs, `households/${HID}/products/prod-1`), productData());
     await setDoc(doc(fs, `households/${HID}/products/prod-1/ratings/r1`), { reaction: 'loved' });
     await setDoc(doc(fs, `households/${HID}/pets/pet-1`), { name: 'Miso' });
     await setDoc(doc(fs, `households/${HID}/events/e1`), { ...eventData(OWNER), createdAt: Timestamp.now() });
@@ -221,5 +230,52 @@ describe('events (append-only)', () => {
     await seedHousehold();
     await assertFails(updateDoc(doc(owner(), `households/${HID}/events/e1`), { delta: 999 }));
     await assertFails(deleteDoc(doc(owner(), `households/${HID}/events/e1`)));
+  });
+});
+
+describe('products (stock fields)', () => {
+  const newPath = `households/${HID}/products/prod-2`;
+  const existing = `households/${HID}/products/prod-1`;
+
+  it('members can create a product with valid stock fields', async () => {
+    await seedHousehold();
+    await assertSucceeds(setDoc(doc(owner(), newPath), productData({ onHand: 0 })));
+  });
+
+  it('rejects negative on hand, on create and update', async () => {
+    await seedHousehold();
+    await assertFails(setDoc(doc(owner(), newPath), productData({ onHand: -1 })));
+    await assertFails(updateDoc(doc(owner(), existing), { onHand: -0.5 }));
+  });
+
+  it('rejects a missing or non-numeric on hand', async () => {
+    await seedHousehold();
+    await assertFails(setDoc(doc(owner(), newPath), { name: 'Food', container: 'can' }));
+    await assertFails(updateDoc(doc(owner(), existing), { onHand: '12' }));
+  });
+
+  it('rejects a missing or non-string container', async () => {
+    await seedHousehold();
+    await assertFails(setDoc(doc(owner(), newPath), { name: 'Food', onHand: 0 }));
+    await assertFails(updateDoc(doc(owner(), existing), { container: 3 }));
+  });
+
+  it('allows the stock transaction: product update plus event create together', async () => {
+    await seedHousehold();
+    const fs = owner();
+    const productRef = doc(fs, existing);
+    await assertSucceeds(
+      runTransaction(fs, async (tx) => {
+        const snapshot = await tx.get(productRef);
+        const onHand = (snapshot.data()?.onHand as number) - 1;
+        tx.update(productRef, { onHand, updatedAt: serverTimestamp() });
+        tx.set(doc(fs, `households/${HID}/events/e3`), {
+          ...eventData(OWNER),
+          type: 'remove',
+          delta: -1,
+          onHandAfter: onHand,
+        });
+      }),
+    );
   });
 });

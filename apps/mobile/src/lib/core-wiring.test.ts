@@ -4,7 +4,7 @@ import { darkColors, lightColors } from '@/theme';
 
 describe('@kibblr/core wiring', () => {
   it('resolves the workspace package through Jest', () => {
-    expect(BASE_UNITS).toEqual(['g', 'ml', 'count']);
+    expect(BASE_UNITS).toEqual(['g', 'ml']);
     expect(isBaseUnit('g')).toBe(true);
   });
 });

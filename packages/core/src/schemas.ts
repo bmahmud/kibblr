@@ -10,13 +10,14 @@ import { BASE_UNITS } from './units';
 
 const timestamp = z.date();
 const id = z.string().min(1);
-/** Amounts are base units: finite, never negative. */
+/** Stock amounts are package counts: finite, never negative. */
 const amount = z.number().nonnegative();
 const httpUrl = z.url({ protocol: /^https?$/ });
 
 export const WEIGHT_UNITS = ['lb', 'kg'] as const;
 export const SPECIES = ['cat', 'dog', 'other'] as const;
-export const CATEGORIES = ['dry', 'wet', 'treat', 'supplement', 'other'] as const;
+export const CATEGORIES = ['dry', 'wet', 'pate', 'treat', 'supplement', 'other'] as const;
+export const CONTAINERS = ['can', 'pouch', 'tray', 'bag', 'box', 'tub', 'bottle', 'item'] as const;
 export const VERDICTS = ['reorder', 'skip', 'undecided'] as const;
 export const REACTIONS = ['loved', 'ok', 'refused'] as const;
 export const EVENT_TYPES = ['add', 'remove', 'adjust'] as const;
@@ -57,10 +58,12 @@ export const productSchema = z.object({
   name: z.string().trim().min(1).max(120),
   brand: z.string().trim().max(80),
   category: z.enum(CATEGORIES),
-  baseUnit: z.enum(BASE_UNITS),
-  packageAmount: z.number().positive(),
-  packageLabel: z.string().max(60),
+  container: z.enum(CONTAINERS),
+  /** Net weight or volume of one package, for display; null when not entered. */
+  size: z.object({ amount: z.number().positive(), unit: z.enum(BASE_UNITS) }).nullable(),
+  /** Packages on hand. */
   onHand: amount,
+  /** Packages per day, all pets combined. */
   dailyUsage: z.number().positive().nullable(),
   autoDeduct: z.boolean(),
   lastAutoDeductAt: timestamp.nullable(),
@@ -90,7 +93,7 @@ export const eventSchema = z
     petId: id.nullable(),
     type: z.enum(EVENT_TYPES),
     method: z.enum(EVENT_METHODS),
-    /** Signed, in base units: the change actually applied after clamping. */
+    /** Signed, in packages: the change actually applied after clamping. */
     delta: z.number().refine((n) => n !== 0, 'delta must not be zero'),
     onHandAfter: amount,
     note: z.string().max(200).nullable(),
@@ -105,6 +108,7 @@ export const eventSchema = z
 export type WeightUnit = (typeof WEIGHT_UNITS)[number];
 export type Species = (typeof SPECIES)[number];
 export type Category = (typeof CATEGORIES)[number];
+export type Container = (typeof CONTAINERS)[number];
 export type Verdict = (typeof VERDICTS)[number];
 export type Reaction = (typeof REACTIONS)[number];
 export type EventType = (typeof EVENT_TYPES)[number];
