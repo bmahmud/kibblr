@@ -1,111 +1,193 @@
-import { CONTAINER_LABELS, formatCount, formatSize } from '@kibblr/core';
-import type { Product, StockStatus, WeightUnit, WithId } from '@kibblr/core';
-import { Link } from 'expo-router';
-import { Pressable, Text, View } from 'react-native';
-import Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
-import type { SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable';
+import {
+  CONTAINER_LABELS,
+  formatCount,
+  formatSize,
+  roundCount,
+} from "@kibblr/core";
+import type { Product, StockStatus, WeightUnit, WithId } from "@kibblr/core";
+import { router } from "expo-router";
+import { Pressable, Text, View } from "react-native";
+import Swipeable from "react-native-gesture-handler/ReanimatedSwipeable";
+import type { SwipeableMethods } from "react-native-gesture-handler/ReanimatedSwipeable";
 
-import { StatusBadge } from '@/components/status-badge';
-import { useTheme } from '@/theme';
+import { StatusBadge } from "@/components/status-badge";
+import { useTheme } from "@/theme";
+
+import { CATEGORY_DISPLAY } from "./category";
 
 type Props = {
   product: WithId<Product>;
   status: StockStatus;
+  /** Only for the size line. */
   unit: WeightUnit;
-  /** One package either way (the swipe step). `unit` is only for the size line. */
+  /** One package either way (the swipe step). */
   onAdd: () => void;
   onUse: () => void;
 };
 
+const ACTION_WIDTH = 88;
+
 /**
- * Swipe right to reveal + (add a package), left to reveal − (use a package),
- * then tap the action (spec section 6.2). The same two actions are offered
- * to screen readers as accessibility actions.
+ * A product card. Swipe right to reveal +1, left to reveal −1, then tap the
+ * action (spec section 6.2). The same two actions are offered to screen
+ * readers as accessibility actions.
+ *
+ * The card is a plain Pressable, not `<Link asChild>`: Link's slot drops a
+ * style function, which loses the card's background and layout.
  */
 export function InventoryRow({ product, status, unit, onAdd, onUse }: Props) {
-  const { colors, spacing, typography, touchTarget } = useTheme();
+  const { colors, radius, spacing, typography, touchTarget } = useTheme();
+  const label = CONTAINER_LABELS[product.container];
+  const count = roundCount(product.onHand);
   const onHand = formatCount(product.onHand, product.container);
-  const one = CONTAINER_LABELS[product.container].one;
-  const subtitle = [product.brand, product.size ? `${formatSize(product.size, unit)} ${one}` : null]
+  const category = CATEGORY_DISPLAY[product.category];
+  const subtitle = [
+    product.brand,
+    product.size ? `${formatSize(product.size, unit)} ${label.one}` : null,
+  ]
     .filter(Boolean)
-    .join(' · ');
+    .join(" · ");
 
-  function action(label: string, color: string, onPress: () => void, methods: SwipeableMethods) {
+  function action(kind: "add" | "use", methods: SwipeableMethods) {
+    const add = kind === "add";
     return (
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={`${label} 1 ${one}`}
+        accessibilityLabel={`${add ? "Add" : "Use"} 1 ${label.one}`}
         onPress={() => {
           methods.close();
-          onPress();
+          (add ? onAdd : onUse)();
         }}
         style={({ pressed }) => ({
-          width: 96,
-          justifyContent: 'center',
-          alignItems: 'center',
-          backgroundColor: color,
-          opacity: pressed ? 0.8 : 1,
-        })}>
-        <Text style={[typography.title, { color: colors.onPrimary }]}>{label === 'Add' ? '+1' : '−1'}</Text>
-        <Text style={[typography.caption, { color: colors.onPrimary }]} numberOfLines={1}>
-          {one}
+          width: ACTION_WIDTH,
+          justifyContent: "center",
+          alignItems: "center",
+          gap: 2,
+          backgroundColor: add ? colors.statusOk : colors.primary,
+          opacity: pressed ? 0.85 : product.onHand === 0 && !add ? 0.5 : 1,
+        })}
+      >
+        <Text style={[typography.title, { color: colors.onPrimary }]}>
+          {add ? "+1" : "−1"}
+        </Text>
+        <Text
+          style={[
+            typography.caption,
+            { color: colors.onPrimary, fontWeight: "600" },
+          ]}
+        >
+          {label.one}
         </Text>
       </Pressable>
     );
   }
 
   return (
-    <Swipeable
-      friction={2}
-      leftThreshold={48}
-      rightThreshold={48}
-      renderLeftActions={(_progress, _translation, methods) => action('Add', colors.statusOk, onAdd, methods)}
-      renderRightActions={(_progress, _translation, methods) =>
-        action('Use', product.onHand === 0 ? colors.textMuted : colors.statusLow, onUse, methods)
-      }>
-      <Link href={{ pathname: '/product/[id]', params: { id: product.id } }} asChild>
+    <View
+      style={{
+        marginHorizontal: spacing.lg,
+        marginBottom: spacing.sm,
+        borderRadius: radius.lg,
+        overflow: "hidden",
+        backgroundColor: colors.surface,
+      }}
+    >
+      <Swipeable
+        friction={2}
+        leftThreshold={48}
+        rightThreshold={48}
+        renderLeftActions={(_progress, _translation, methods) =>
+          action("add", methods)
+        }
+        renderRightActions={(_progress, _translation, methods) =>
+          action("use", methods)
+        }
+      >
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={`${product.name}${subtitle ? `, ${subtitle}` : ''}, ${onHand} on hand, ${status}`}
+          accessibilityLabel={`${product.name}${subtitle ? `, ${subtitle}` : ""}, ${onHand} on hand, ${status}`}
           accessibilityHint="Opens the product. Swipe for quick add or use."
           accessibilityActions={[
-            { name: 'increment', label: `Add 1 ${one}` },
-            { name: 'decrement', label: `Use 1 ${one}` },
+            { name: "increment", label: `Add 1 ${label.one}` },
+            { name: "decrement", label: `Use 1 ${label.one}` },
           ]}
           onAccessibilityAction={(event) => {
-            if (event.nativeEvent.actionName === 'increment') {
+            if (event.nativeEvent.actionName === "increment") {
               onAdd();
-            } else if (event.nativeEvent.actionName === 'decrement') {
+            } else if (event.nativeEvent.actionName === "decrement") {
               onUse();
             }
           }}
+          onPress={() =>
+            router.push({
+              pathname: "/product/[id]",
+              params: { id: product.id },
+            })
+          }
           style={({ pressed }) => ({
-            minHeight: touchTarget + spacing.lg,
-            flexDirection: 'row',
-            alignItems: 'center',
+            minHeight: touchTarget + spacing.xl,
+            flexDirection: "row",
+            alignItems: "center",
             gap: spacing.md,
             paddingHorizontal: spacing.lg,
             paddingVertical: spacing.md,
             backgroundColor: pressed ? colors.surfaceRaised : colors.surface,
-            borderBottomWidth: 1,
-            borderBottomColor: colors.border,
-          })}>
+          })}
+        >
+          <View
+            importantForAccessibility="no-hide-descendants"
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: radius.md,
+              alignItems: "center",
+              justifyContent: "center",
+              backgroundColor: colors.surfaceRaised,
+            }}
+          >
+            <Text style={typography.title}>{category.icon}</Text>
+          </View>
+
           <View style={{ flex: 1, gap: 2 }}>
-            <Text style={[typography.bodyStrong, { color: colors.text }]} numberOfLines={1}>
+            <Text
+              style={[typography.bodyStrong, { color: colors.text }]}
+              numberOfLines={2}
+            >
               {product.name}
             </Text>
             {subtitle ? (
-              <Text style={[typography.caption, { color: colors.textMuted }]} numberOfLines={1}>
+              <Text
+                style={[typography.caption, { color: colors.textMuted }]}
+                numberOfLines={1}
+              >
                 {subtitle}
               </Text>
             ) : null}
+            {status === "ok" ? null : (
+              <View style={{ flexDirection: "row", marginTop: spacing.xs }}>
+                <StatusBadge status={status} />
+              </View>
+            )}
           </View>
-          <View style={{ alignItems: 'flex-end', gap: spacing.xs }}>
-            <Text style={[typography.bodyStrong, { color: colors.text }]}>{onHand}</Text>
-            <StatusBadge status={status} />
+
+          <View style={{ alignItems: "flex-end", minWidth: 48 }}>
+            <Text
+              style={[
+                typography.title,
+                {
+                  color: status === "out" ? colors.statusOut : colors.text,
+                  fontVariant: ["tabular-nums"],
+                },
+              ]}
+            >
+              {String(count)}
+            </Text>
+            <Text style={[typography.caption, { color: colors.textMuted }]}>
+              {count === 1 ? label.one : label.many}
+            </Text>
           </View>
         </Pressable>
-      </Link>
-    </Swipeable>
+      </Swipeable>
+    </View>
   );
 }

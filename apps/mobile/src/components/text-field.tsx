@@ -6,16 +6,18 @@ import { useTheme } from '@/theme';
 
 type Props = Omit<TextInputProps, 'style'> & {
   label: string;
+  /** Keep the label for screen readers only, e.g. a search field whose placeholder says enough. */
+  hideLabel?: boolean;
   error?: string | undefined;
   ref?: Ref<TextInputInstance>;
 };
 
-export function TextField({ label, error, ref, ...input }: Props) {
+export function TextField({ label, hideLabel = false, error, ref, ...input }: Props) {
   const { colors, radius, spacing, typography, touchTarget } = useTheme();
 
   return (
     <View style={{ gap: spacing.xs }}>
-      <Text style={[typography.caption, { color: colors.textMuted }]}>{label}</Text>
+      {hideLabel ? null : <Text style={[typography.caption, { color: colors.textMuted }]}>{label}</Text>}
       <TextInput
         ref={ref}
         accessibilityLabel={label}

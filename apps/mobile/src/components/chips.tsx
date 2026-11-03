@@ -29,9 +29,10 @@ export function Chips<T extends string>({ options, selected, onSelect, label, di
         accessibilityState={{ selected: active, disabled }}
         disabled={disabled}
         onPress={() => onSelect(option.value)}
-        hitSlop={{ top: 4, bottom: 4 }}
+        // Compact pill; the slop keeps the full touch target.
+        hitSlop={{ top: 6, bottom: 6 }}
         style={({ pressed }) => ({
-          minHeight: touchTarget - 8,
+          minHeight: touchTarget - 12,
           justifyContent: 'center',
           paddingHorizontal: spacing.md,
           borderRadius: radius.pill,
@@ -40,7 +41,13 @@ export function Chips<T extends string>({ options, selected, onSelect, label, di
           backgroundColor: active ? colors.primary : colors.surface,
           opacity: disabled ? 0.5 : pressed ? 0.8 : 1,
         })}>
-        <Text style={[typography.body, { color: active ? colors.onPrimary : colors.text }]}>{option.label}</Text>
+        <Text
+          style={[
+            active ? typography.bodyStrong : typography.body,
+            { color: active ? colors.onPrimary : colors.text },
+          ]}>
+          {option.label}
+        </Text>
       </Pressable>
     );
   });
