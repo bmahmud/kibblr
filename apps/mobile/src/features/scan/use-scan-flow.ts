@@ -1,15 +1,17 @@
 import { formatCount, normalizeGtin, scanUseAction } from '@kibblr/core';
-import type { BarcodeHint, Product, WithId } from '@kibblr/core';
+import type { BarcodeHint, BarcodeLookup, Product, WithId } from '@kibblr/core';
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
 
+import { lookupBarcode } from '@/api/barcode';
 import type { ToastOptions } from '@/components/toast';
 import { useSignedIn } from '@/features/auth/auth-provider';
 import { inventoryErrorMessage } from '@/features/inventory/errors';
 import { useStockActions } from '@/features/inventory/use-stock-actions';
 import { findProductsByBarcode, setProductArchived } from '@/firebase/repositories/products';
 
+import { useScanSettings } from './scan-store';
 import type { ScanMode } from './scan-store';
 
 /** What the result card shows: the same shape as a toast, so stock actions can report to it. */
@@ -24,7 +26,12 @@ function haptic(kind: 'success' | 'warning') {
   ).catch(() => undefined);
 }
 
-function openNewProduct(barcode: string, count: number) {
+/** An unknown barcode waiting on the lookup Worker. */
+export type PendingLookup = { barcode: string; count: number };
+
+/** New product for an unknown barcode, starting from what the lookup found, if anything. */
+function openNewProduct(barcode: string, count: number, found: BarcodeLookup | null) {
+  useScanSettings.getState().setPrefill(found);
   router.push({
     pathname: '/product/new',
     params: { barcode, count: String(count), method: 'scan' },
@@ -40,6 +47,9 @@ export function useScanFlow() {
   const [result, setResult] = useState<ScanResult | null>(null);
   const [pendingUse, setPendingUse] = useState<PendingUse | null>(null);
   const [busy, setBusy] = useState(false);
+  const [lookingUp, setLookingUp] = useState<PendingLookup | null>(null);
+  // Bumped by Skip, so a lookup that answers late is ignored.
+  const lookupAttempt = useRef(0);
   // A ref as well as state: scans arrive faster than a re-render.
   const busyRef = useRef(false);
   const actions = useStockActions(setResult);
@@ -71,6 +81,30 @@ export function useScanFlow() {
       setResult((current) => current && { ...current, message: `${current.message} ${left}` });
     }
     return true;
+  }
+
+  /** Looks an unknown barcode up (spec section 6.3, step 4), then opens New product either way. */
+  async function lookUpAndCreate(barcode: string, count: number) {
+    const attempt = ++lookupAttempt.current;
+    setResult(null);
+    setLookingUp({ barcode, count });
+    const found = await lookupBarcode(barcode);
+    if (attempt !== lookupAttempt.current) {
+      return;
+    }
+    setLookingUp(null);
+    openNewProduct(barcode, count, found);
+  }
+
+  /** Stop waiting for the lookup and type the product in. */
+  function skipLookup() {
+    const pending = lookingUp;
+    if (!pending) {
+      return;
+    }
+    lookupAttempt.current++;
+    setLookingUp(null);
+    openNewProduct(pending.barcode, pending.count, null);
   }
 
   /** Returns false when the code was ignored because another scan is still running. */
@@ -123,14 +157,13 @@ export function useScanFlow() {
           action: { label: 'Restore', onPress: () => void restore(archived) },
         });
       } else if (mode === 'add') {
-        setResult(null);
-        openNewProduct(barcode, multiplier);
+        await lookUpAndCreate(barcode, multiplier);
       } else {
         setResult({
           message: "This barcode isn't in your inventory.",
           action: {
             label: 'Create it',
-            onPress: () => openNewProduct(barcode, 1),
+            onPress: () => void exclusive(() => lookUpAndCreate(barcode, 1)),
           },
         });
       }
@@ -165,6 +198,8 @@ export function useScanFlow() {
     handle,
     applyUse,
     cancelUse: () => setPendingUse(null),
+    skipLookup,
+    lookingUp,
     dismiss,
     /** Show a result that came from elsewhere, e.g. New product. */
     show: setResult,

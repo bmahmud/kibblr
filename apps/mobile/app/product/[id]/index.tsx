@@ -7,6 +7,7 @@ import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollVie
 import { Button } from '@/components/button';
 import { EmptyState } from '@/components/empty-state';
 import { NavLink } from '@/components/nav-link';
+import { ProductImage } from '@/components/product-image';
 import { StatusBadge } from '@/components/status-badge';
 import { TextField } from '@/components/text-field';
 import { useToast } from '@/components/toast';
@@ -165,6 +166,9 @@ function ProductDetail({ product }: { product: WithId<Product> }) {
             },
           ]}>
           {product.archived ? <Text style={[typography.caption, { color: colors.statusLow }]}>Archived</Text> : null}
+          {product.imageUrl ? (
+            <ProductImage imageUrl={product.imageUrl} icon={CATEGORY_DISPLAY[product.category].icon} size={96} />
+          ) : null}
           <Text style={[typography.body, { color: colors.textMuted }]}>
             {[CATEGORY_DISPLAY[product.category].icon, product.brand || CATEGORY_DISPLAY[product.category].label].join(
               ' ',

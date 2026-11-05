@@ -78,11 +78,16 @@ export function validateProductForm(input: ProductFormInput): ProductFormResult 
 
 /**
  * A new product: the form's fields plus the spec's defaults, and the GTIN-13
- * if it was scanned. Stock and timestamps are set on write.
+ * if it was scanned. `lookup` is given when the form was filled in by the
+ * barcode lookup. Stock and timestamps are set on write.
  */
 export type ProductDraft = Omit<Product, 'onHand' | 'createdAt' | 'updatedAt'>;
 
-export function newProductDraft(fields: ProductFields, barcode: string | null = null): ProductDraft {
+export function newProductDraft(
+  fields: ProductFields,
+  barcode: string | null = null,
+  lookup?: { imageUrl: string | null },
+): ProductDraft {
   return {
     ...fields,
     barcode,
@@ -94,8 +99,8 @@ export function newProductDraft(fields: ProductFields, barcode: string | null = 
     verdict: 'undecided',
     verdictNote: null,
     reorderUrl: null,
-    imageUrl: null,
-    source: 'manual',
+    imageUrl: lookup?.imageUrl ?? null,
+    source: lookup ? 'lookup' : 'manual',
     archived: false,
   };
 }

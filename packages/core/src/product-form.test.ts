@@ -136,6 +136,22 @@ describe('newProductDraft with a barcode', () => {
     expect(newProductDraft(result.fields, '0036000291452').barcode).toBe('0036000291452');
     expect(newProductDraft(result.fields).barcode).toBeNull();
   });
+
+  it('marks a looked-up product and keeps its photo', () => {
+    const result = validateProductForm(valid);
+    if (!result.ok) {
+      throw new Error('expected a valid form');
+    }
+    const imageUrl = 'https://images.openpetfoodfacts.org/front.jpg';
+    expect(newProductDraft(result.fields, '0036000291452', { imageUrl })).toMatchObject({
+      imageUrl,
+      source: 'lookup',
+    });
+    expect(newProductDraft(result.fields, '0036000291452', { imageUrl: null })).toMatchObject({
+      imageUrl: null,
+      source: 'lookup',
+    });
+  });
 });
 
 describe('productFormValues', () => {

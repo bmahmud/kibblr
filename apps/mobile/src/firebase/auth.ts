@@ -34,3 +34,12 @@ export async function signOut(): Promise<void> {
 export async function resetPassword(email: string): Promise<void> {
   await sendPasswordResetEmail(auth, email.trim());
 }
+
+/** A current ID token for the barcode Worker (refreshed by Firebase when needed), or null if signed out or offline. */
+export async function idToken(): Promise<string | null> {
+  try {
+    return (await auth.currentUser?.getIdToken()) ?? null;
+  } catch {
+    return null;
+  }
+}

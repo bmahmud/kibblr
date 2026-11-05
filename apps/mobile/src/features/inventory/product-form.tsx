@@ -20,6 +20,7 @@ import { KeyboardAvoidingView, Platform, ScrollView, Text, View } from 'react-na
 import { AmountInput } from '@/components/amount-input';
 import { Button } from '@/components/button';
 import { Chips } from '@/components/chips';
+import { ProductImage } from '@/components/product-image';
 import { TextField } from '@/components/text-field';
 import { useTheme } from '@/theme';
 
@@ -43,10 +44,12 @@ type Props = {
   onSubmit: (fields: ProductFields, startingCount: number) => Promise<void>;
   /** A scanned barcode, shown read-only. */
   barcode?: string | null;
+  /** Set when the barcode lookup filled the form in: its photo and which database it came from. */
+  lookup?: { imageUrl: string | null; sourceLabel: string } | null;
 };
 
 /** New and Edit product (spec section 6.4). Stock is counted in packages; the size is just for reference. */
-export function ProductForm({ initial, unit, submitLabel, onSubmit, barcode = null }: Props) {
+export function ProductForm({ initial, unit, submitLabel, onSubmit, barcode = null, lookup = null }: Props) {
   const { colors, spacing, typography } = useTheme();
   const [form, setForm] = useState<ProductFormInput>(initial);
   const [errors, setErrors] = useState<ProductFormErrors>({});
@@ -86,7 +89,18 @@ export function ProductForm({ initial, unit, submitLabel, onSubmit, barcode = nu
         keyboardShouldPersistTaps="handled"
         contentInsetAdjustmentBehavior="automatic"
         contentContainerStyle={{ padding: spacing.xl, gap: spacing.lg }}>
-        {barcode ? (
+        {lookup ? (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+            {lookup.imageUrl ? (
+              <ProductImage imageUrl={lookup.imageUrl} icon={CATEGORY_DISPLAY[form.category].icon} size={64} />
+            ) : null}
+            <Text style={[typography.caption, { color: colors.textMuted, flex: 1 }]}>
+              Filled in from {lookup.sourceLabel}. Check the details before saving.
+              {barcode ? `
+Barcode ${barcode}` : ''}
+            </Text>
+          </View>
+        ) : barcode ? (
           <Text style={[typography.caption, { color: colors.textMuted }]}>
             Barcode {barcode} · not in your inventory yet
           </Text>

@@ -5,6 +5,7 @@ import { Pressable, Text, View } from 'react-native';
 import Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import type { SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable';
 
+import { ProductImage } from '@/components/product-image';
 import { StatusBadge } from '@/components/status-badge';
 import { useTheme } from '@/theme';
 
@@ -109,18 +110,7 @@ export function InventoryRow({ product, status, unit, onAdd, onUse }: Props) {
             paddingVertical: spacing.md,
             backgroundColor: pressed ? colors.surfaceRaised : colors.surface,
           })}>
-          <View
-            importantForAccessibility="no-hide-descendants"
-            style={{
-              width: 44,
-              height: 44,
-              borderRadius: radius.md,
-              alignItems: 'center',
-              justifyContent: 'center',
-              backgroundColor: colors.surfaceRaised,
-            }}>
-            <Text style={typography.title}>{category.icon}</Text>
-          </View>
+          <ProductImage imageUrl={product.imageUrl} icon={category.icon} size={44} />
 
           <View style={{ flex: 1, gap: 2 }}>
             <Text style={[typography.bodyStrong, { color: colors.text }]} numberOfLines={2}>

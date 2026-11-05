@@ -1,3 +1,4 @@
+import type { BarcodeLookup } from '@kibblr/core';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
@@ -15,6 +16,9 @@ type ScanSettings = {
    */
   handoff: ToastOptions | null;
   setHandoff: (handoff: ToastOptions | null) => void;
+  /** What the barcode lookup found, for New product to start from. Not persisted. */
+  prefill: BarcodeLookup | null;
+  setPrefill: (prefill: BarcodeLookup | null) => void;
 };
 
 /**
@@ -29,6 +33,8 @@ export const useScanSettings = create<ScanSettings>()(
       setMode: (mode) => set({ mode }),
       handoff: null,
       setHandoff: (handoff) => set({ handoff }),
+      prefill: null,
+      setPrefill: (prefill) => set({ prefill }),
     }),
     {
       name: 'kibblr.scan',

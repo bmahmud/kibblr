@@ -1,0 +1,19 @@
+{
+  "code": "OK",
+  "total": 1,
+  "offset": 0,
+  "items": [
+    {
+      "ean": "0050000429745",
+      "title": "Purina Fancy Feast Classic Paté Gourmet Wet Cat Food Tender Beef & Chicken Feast - 3oz",
+      "description": "Turn mealtime into a feast with 100 percent complete and balanced Purina Fancy Feast Beef and Chicken Feast Classic Pate in Gravy Grain Free Cat Food.",
+      "upc": "050000429745",
+      "brand": "Fancy Feast",
+      "model": "1629463",
+      "size": "3 oz.",
+      "weight": "4 Pounds",
+      "category": "Animals & Pet Supplies > Pet Supplies > Cat Supplies > Cat Food",
+      "images": ["https://target.scene7.com/is/image/Target/GUEST_64186e04"]
+    }
+  ]
+}
