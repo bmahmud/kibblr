@@ -10,7 +10,7 @@ FIREBASE_PROJECT_ID = "kibblr"
 # Created with `npx wrangler kv namespace create BARCODE_CACHE`.
 [[kv_namespaces]]
 binding = "BARCODE_CACHE"
-id = "REPLACE_WITH_KV_NAMESPACE_ID"
+id = "612d26b2cfd847dc8ac39485d8e20cca"
 
 # 30 lookups per minute per signed-in user. The Worker runs without it if the binding is missing.
 [[ratelimits]]
