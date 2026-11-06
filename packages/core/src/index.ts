@@ -35,3 +35,9 @@ export { newProductDraft, productFormValues, validateProductForm } from './produ
 export type { ProductDraft, ProductFields, ProductFormErrors, ProductFormInput, ProductFormResult } from './product-form';
 
 export { formatRelativeTime } from './time';
+
+export { expandUpcE, isValidGtin, normalizeGtin } from './gtin';
+export type { BarcodeHint } from './gtin';
+
+export { QUICK_USE, SCAN_DEBOUNCE_MS, parseMultiplier, scanUseAction, shouldHandleScan } from './scan';
+export type { LastScan } from './scan';

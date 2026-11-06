@@ -29,6 +29,15 @@ const config: ExpoConfig = {
   plugins: [
     'expo-router',
     [
+      'expo-camera',
+      {
+        cameraPermission: 'Kibblr uses the camera to scan pet food barcodes.',
+        // Barcodes only: no video or audio is recorded.
+        microphonePermission: false,
+        recordAudioAndroid: false,
+      },
+    ],
+    [
       'expo-splash-screen',
       {
         backgroundColor: '#208AEF',

@@ -76,13 +76,16 @@ export function validateProductForm(input: ProductFormInput): ProductFormResult 
   };
 }
 
-/** A new manual product: the form's fields plus the spec's defaults. Stock and timestamps are set on write. */
+/**
+ * A new product: the form's fields plus the spec's defaults, and the GTIN-13
+ * if it was scanned. Stock and timestamps are set on write.
+ */
 export type ProductDraft = Omit<Product, 'onHand' | 'createdAt' | 'updatedAt'>;
 
-export function newProductDraft(fields: ProductFields): ProductDraft {
+export function newProductDraft(fields: ProductFields, barcode: string | null = null): ProductDraft {
   return {
     ...fields,
-    barcode: null,
+    barcode,
     dailyUsage: null,
     autoDeduct: false,
     lastAutoDeductAt: null,

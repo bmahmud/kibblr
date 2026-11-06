@@ -1,31 +1,24 @@
-import { CATEGORIES, groupInventory } from "@kibblr/core";
-import type { Category } from "@kibblr/core";
-import { Link, router } from "expo-router";
-import { useState } from "react";
-import {
-  ActivityIndicator,
-  Platform,
-  Pressable,
-  SectionList,
-  Text,
-  View,
-} from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { CATEGORIES, groupInventory } from '@kibblr/core';
+import type { Category } from '@kibblr/core';
+import { Link, router } from 'expo-router';
+import { useState } from 'react';
+import { ActivityIndicator, Platform, Pressable, SectionList, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Button } from "@/components/button";
-import { Chips } from "@/components/chips";
-import { EmptyState } from "@/components/empty-state";
-import { TextField } from "@/components/text-field";
-import { CATEGORY_DISPLAY } from "@/features/inventory/category";
-import { useHouseholdSettings, useProducts } from "@/features/inventory/hooks";
-import { InventoryRow } from "@/features/inventory/inventory-row";
-import { useStockActions } from "@/features/inventory/use-stock-actions";
-import { useTheme } from "@/theme";
+import { Button } from '@/components/button';
+import { Chips } from '@/components/chips';
+import { EmptyState } from '@/components/empty-state';
+import { TextField } from '@/components/text-field';
+import { CATEGORY_DISPLAY } from '@/features/inventory/category';
+import { useHouseholdSettings, useProducts } from '@/features/inventory/hooks';
+import { InventoryRow } from '@/features/inventory/inventory-row';
+import { useStockActions } from '@/features/inventory/use-stock-actions';
+import { useTheme } from '@/theme';
 
-type CategoryFilter = Category | "all";
+type CategoryFilter = Category | 'all';
 
 const CATEGORY_FILTERS: { value: CategoryFilter; label: string }[] = [
-  { value: "all", label: "All" },
+  { value: 'all', label: 'All' },
   ...CATEGORIES.map((value) => ({
     value,
     label: `${CATEGORY_DISPLAY[value].icon} ${CATEGORY_DISPLAY[value].label}`,
@@ -38,13 +31,13 @@ export default function InventoryScreen() {
   const products = useProducts();
   const settings = useHouseholdSettings();
   const actions = useStockActions();
-  const [query, setQuery] = useState("");
-  const [category, setCategory] = useState<CategoryFilter>("all");
+  const [query, setQuery] = useState('');
+  const [category, setCategory] = useState<CategoryFilter>('all');
 
-  const all = products.status === "ready" ? products.data : [];
+  const all = products.status === 'ready' ? products.data : [];
   const { lowOrOut, ok } = groupInventory(all, settings, {
     query,
-    category: category === "all" ? null : category,
+    category: category === 'all' ? null : category,
   });
   const sections = [
     { title: `Low / Out · ${lowOrOut.length}`, data: lowOrOut },
@@ -57,15 +50,9 @@ export default function InventoryScreen() {
         padding: spacing.lg,
         gap: spacing.md,
         backgroundColor: colors.background,
-      }}
-    >
-      <View
-        style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm }}
-      >
-        <Text
-          accessibilityRole="header"
-          style={[typography.display, { color: colors.text, flex: 1 }]}
-        >
+      }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+        <Text accessibilityRole="header" style={[typography.display, { color: colors.text, flex: 1 }]}>
           Inventory
         </Text>
         <Link href="/scan" asChild>
@@ -74,13 +61,10 @@ export default function InventoryScreen() {
             accessibilityLabel="Scan"
             style={{
               minHeight: touchTarget,
-              justifyContent: "center",
+              justifyContent: 'center',
               paddingHorizontal: spacing.sm,
-            }}
-          >
-            <Text style={[typography.bodyStrong, { color: colors.primary }]}>
-              Scan
-            </Text>
+            }}>
+            <Text style={[typography.bodyStrong, { color: colors.primary }]}>Scan</Text>
           </Pressable>
         </Link>
         <Link href="/product/new" asChild>
@@ -90,15 +74,12 @@ export default function InventoryScreen() {
             hitSlop={{ top: 4, bottom: 4 }}
             style={{
               minHeight: touchTarget - 8,
-              justifyContent: "center",
+              justifyContent: 'center',
               paddingHorizontal: spacing.lg,
               borderRadius: radius.pill,
               backgroundColor: colors.primary,
-            }}
-          >
-            <Text style={[typography.bodyStrong, { color: colors.onPrimary }]}>
-              + Add
-            </Text>
+            }}>
+            <Text style={[typography.bodyStrong, { color: colors.onPrimary }]}>+ Add</Text>
           </Pressable>
         </Link>
       </View>
@@ -114,46 +95,29 @@ export default function InventoryScreen() {
             clearButtonMode="while-editing"
             returnKeyType="search"
           />
-          <Chips
-            label="Category"
-            options={CATEGORY_FILTERS}
-            selected={category}
-            onSelect={setCategory}
-            scroll
-          />
+          <Chips label="Category" options={CATEGORY_FILTERS} selected={category} onSelect={setCategory} scroll />
         </>
       ) : null}
     </View>
   );
 
   function empty() {
-    if (products.status === "loading") {
-      return (
-        <ActivityIndicator
-          style={{ marginTop: spacing.xxl }}
-          color={colors.primary}
-        />
-      );
+    if (products.status === 'loading') {
+      return <ActivityIndicator style={{ marginTop: spacing.xxl }} color={colors.primary} />;
     }
-    if (products.status === "error") {
+    if (products.status === 'error') {
       return <EmptyState title="Couldn't load" body={products.message} />;
     }
     if (all.length === 0) {
       return (
         <EmptyState
           title="Add your first product"
-          body="Add the cans and bags you have at home, then count them down as you use them."
-        >
-          <Button
-            label="Add a product"
-            onPress={() => router.push("/product/new")}
-          />
+          body="Add the cans and bags you have at home, then count them down as you use them.">
+          <Button label="Add a product" onPress={() => router.push('/product/new')} />
         </EmptyState>
       );
     }
-    return (
-      <EmptyState title="No matches" body="Try another search or category." />
-    );
+    return <EmptyState title="No matches" body="Try another search or category." />;
   }
 
   return (
@@ -161,7 +125,7 @@ export default function InventoryScreen() {
       style={{ backgroundColor: colors.background }}
       contentInsetAdjustmentBehavior="automatic"
       contentContainerStyle={{
-        paddingTop: Platform.OS === "android" ? insets.top : 0,
+        paddingTop: Platform.OS === 'android' ? insets.top : 0,
         // Room for the tab bar and the undo toast.
         paddingBottom: spacing.xxl * 3,
       }}
@@ -179,15 +143,14 @@ export default function InventoryScreen() {
             typography.caption,
             {
               color: colors.textMuted,
-              fontWeight: "600",
-              textTransform: "uppercase",
+              fontWeight: '600',
+              textTransform: 'uppercase',
               paddingHorizontal: spacing.lg,
               letterSpacing: 0.5,
               paddingTop: spacing.md,
               paddingBottom: spacing.sm,
             },
-          ]}
-        >
+          ]}>
           {section.title}
         </Text>
       )}

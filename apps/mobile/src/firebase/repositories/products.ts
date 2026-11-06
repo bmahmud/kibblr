@@ -4,6 +4,7 @@ import {
   addDoc,
   collection,
   doc,
+  getDocs,
   onSnapshot,
   query,
   serverTimestamp,
@@ -80,6 +81,29 @@ export function watchProduct(
     },
     onError,
   );
+}
+
+/**
+ * Products with this GTIN-13, split by whether they are archived. A one-off
+ * read for the scanner; documents that fail the schema are skipped.
+ */
+export async function findProductsByBarcode(
+  householdId: string,
+  barcode: string,
+): Promise<{ active: WithId<Product>[]; archived: WithId<Product>[] }> {
+  const snapshot = await getDocs(
+    query(productsPath(householdId), where('barcode', '==', barcode)).withConverter(productConverter),
+  );
+  const result: { active: WithId<Product>[]; archived: WithId<Product>[] } = { active: [], archived: [] };
+  for (const document of snapshot.docs) {
+    try {
+      const product = document.data();
+      (product.archived ? result.archived : result.active).push(product);
+    } catch (error) {
+      console.warn(`Skipping product ${document.id}: it does not match the schema.`, error);
+    }
+  }
+  return result;
 }
 
 /** Creates a product with nothing on hand; starting stock is added with `applyStockChange`. */

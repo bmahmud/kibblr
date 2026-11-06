@@ -5,7 +5,7 @@ import {
   defaultContainer,
   defaultSizeUnit,
   validateProductForm,
-} from "@kibblr/core";
+} from '@kibblr/core';
 import type {
   Container,
   DisplayUnit,
@@ -13,35 +13,27 @@ import type {
   ProductFormErrors,
   ProductFormInput,
   WeightUnit,
-} from "@kibblr/core";
-import { useState } from "react";
-import {
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  Text,
-  View,
-} from "react-native";
+} from '@kibblr/core';
+import { useState } from 'react';
+import { KeyboardAvoidingView, Platform, ScrollView, Text, View } from 'react-native';
 
-import { AmountInput } from "@/components/amount-input";
-import { Button } from "@/components/button";
-import { Chips } from "@/components/chips";
-import { TextField } from "@/components/text-field";
-import { useTheme } from "@/theme";
+import { AmountInput } from '@/components/amount-input';
+import { Button } from '@/components/button';
+import { Chips } from '@/components/chips';
+import { TextField } from '@/components/text-field';
+import { useTheme } from '@/theme';
 
-import { CATEGORY_DISPLAY } from "./category";
+import { CATEGORY_DISPLAY } from './category';
 
 const CONTAINER_OPTIONS = CONTAINERS.map((value) => ({
   value,
-  label:
-    CONTAINER_LABELS[value].one[0]?.toUpperCase() +
-    CONTAINER_LABELS[value].one.slice(1),
+  label: CONTAINER_LABELS[value].one[0]?.toUpperCase() + CONTAINER_LABELS[value].one.slice(1),
 }));
 
 /** The household's own units first. */
 const SIZE_UNITS: Record<WeightUnit, readonly DisplayUnit[]> = {
-  lb: ["oz", "lb", "floz", "cup", "g", "kg", "ml"],
-  kg: ["g", "kg", "ml", "oz", "lb", "floz", "cup"],
+  lb: ['oz', 'lb', 'floz', 'cup', 'g', 'kg', 'ml'],
+  kg: ['g', 'kg', 'ml', 'oz', 'lb', 'floz', 'cup'],
 };
 
 type Props = {
@@ -49,19 +41,19 @@ type Props = {
   unit: WeightUnit;
   submitLabel: string;
   onSubmit: (fields: ProductFields, startingCount: number) => Promise<void>;
+  /** A scanned barcode, shown read-only. */
+  barcode?: string | null;
 };
 
 /** New and Edit product (spec section 6.4). Stock is counted in packages; the size is just for reference. */
-export function ProductForm({ initial, unit, submitLabel, onSubmit }: Props) {
+export function ProductForm({ initial, unit, submitLabel, onSubmit, barcode = null }: Props) {
   const { colors, spacing, typography } = useTheme();
   const [form, setForm] = useState<ProductFormInput>(initial);
   const [errors, setErrors] = useState<ProductFormErrors>({});
   const [saving, setSaving] = useState(false);
   // A new product's container follows its type until it is picked by hand.
-  const [containerPicked, setContainerPicked] = useState(
-    initial.mode === "edit",
-  );
-  const creating = form.mode === "create";
+  const [containerPicked, setContainerPicked] = useState(initial.mode === 'edit');
+  const creating = form.mode === 'create';
   const container = CONTAINER_LABELS[form.container];
 
   function update(patch: Partial<ProductFormInput>) {
@@ -69,11 +61,7 @@ export function ProductForm({ initial, unit, submitLabel, onSubmit }: Props) {
   }
 
   function changeContainer(next: Container) {
-    update(
-      form.sizeValue.trim()
-        ? { container: next }
-        : { container: next, sizeUnit: defaultSizeUnit(next, unit) },
-    );
+    update(form.sizeValue.trim() ? { container: next } : { container: next, sizeUnit: defaultSizeUnit(next, unit) });
   }
 
   async function submit() {
@@ -92,16 +80,17 @@ export function ProductForm({ initial, unit, submitLabel, onSubmit }: Props) {
   }
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-    >
+    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView
         style={{ backgroundColor: colors.background }}
         keyboardShouldPersistTaps="handled"
         contentInsetAdjustmentBehavior="automatic"
-        contentContainerStyle={{ padding: spacing.xl, gap: spacing.lg }}
-      >
+        contentContainerStyle={{ padding: spacing.xl, gap: spacing.lg }}>
+        {barcode ? (
+          <Text style={[typography.caption, { color: colors.textMuted }]}>
+            Barcode {barcode} · not in your inventory yet
+          </Text>
+        ) : null}
         <TextField
           label="Name"
           value={form.name}
@@ -119,9 +108,7 @@ export function ProductForm({ initial, unit, submitLabel, onSubmit }: Props) {
         />
 
         <View style={{ gap: spacing.xs }}>
-          <Text style={[typography.caption, { color: colors.textMuted }]}>
-            Type
-          </Text>
+          <Text style={[typography.caption, { color: colors.textMuted }]}>Type</Text>
           <Chips
             label="Type"
             options={CATEGORIES.map((value) => ({
@@ -139,9 +126,7 @@ export function ProductForm({ initial, unit, submitLabel, onSubmit }: Props) {
         </View>
 
         <View style={{ gap: spacing.xs }}>
-          <Text style={[typography.caption, { color: colors.textMuted }]}>
-            Comes in a
-          </Text>
+          <Text style={[typography.caption, { color: colors.textMuted }]}>Comes in a</Text>
           <Chips
             label="Comes in a"
             scroll
@@ -162,7 +147,7 @@ export function ProductForm({ initial, unit, submitLabel, onSubmit }: Props) {
           unit={form.sizeUnit}
           onChangeUnit={(sizeUnit) => update({ sizeUnit })}
           error={errors.size}
-          placeholder={form.container === "bag" ? "16" : "3"}
+          placeholder={form.container === 'bag' ? '16' : '3'}
         />
 
         {creating ? (
@@ -176,11 +161,7 @@ export function ProductForm({ initial, unit, submitLabel, onSubmit }: Props) {
           />
         ) : null}
 
-        <Button
-          label={submitLabel}
-          onPress={() => void submit()}
-          busy={saving}
-        />
+        <Button label={submitLabel} onPress={() => void submit()} busy={saving} />
       </ScrollView>
     </KeyboardAvoidingView>
   );

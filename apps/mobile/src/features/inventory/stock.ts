@@ -7,7 +7,7 @@ export type StockContext = { householdId: string; uid: string };
 
 export type ApplyStockChangeInput = {
   productId: string;
-  /** Signed, in the product's base unit. Removing more than is on hand clamps to 0. */
+  /** Signed, in packages. Removing more than is on hand clamps to 0. */
   delta: number;
   method: EventMethod;
   petId?: string | null;
