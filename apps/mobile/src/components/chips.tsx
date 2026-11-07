@@ -73,3 +73,58 @@ export function Chips<T extends string>({ options, selected, onSelect, label, di
     </View>
   );
 }
+
+type MultiProps<T extends string> = {
+  options: readonly ChipOption<T>[];
+  selected: readonly T[];
+  onChange: (selected: T[]) => void;
+  /** Read out before the options, e.g. "Who eats it". */
+  label: string;
+  disabled?: boolean;
+};
+
+/** A multi-select row of pills, e.g. the pets that eat a product. Keeps the options' order. */
+export function MultiChips<T extends string>({ options, selected, onChange, label, disabled = false }: MultiProps<T>) {
+  const { colors, radius, spacing, typography, touchTarget } = useTheme();
+
+  function toggle(value: T) {
+    const next = selected.includes(value) ? selected.filter((v) => v !== value) : [...selected, value];
+    onChange(next);
+  }
+
+  return (
+    <View accessibilityLabel={label} style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
+      {options.map((option) => {
+        const active = selected.includes(option.value);
+        return (
+          <Pressable
+            key={option.value}
+            accessibilityRole="checkbox"
+            accessibilityLabel={option.label}
+            accessibilityState={{ checked: active, disabled }}
+            disabled={disabled}
+            onPress={() => toggle(option.value)}
+            hitSlop={{ top: 6, bottom: 6 }}
+            style={({ pressed }) => ({
+              minHeight: touchTarget - 12,
+              justifyContent: 'center',
+              paddingHorizontal: spacing.md,
+              borderRadius: radius.pill,
+              borderWidth: 1,
+              borderColor: active ? colors.primary : colors.border,
+              backgroundColor: active ? colors.primary : colors.surface,
+              opacity: disabled ? 0.5 : pressed ? 0.8 : 1,
+            })}>
+            <Text
+              style={[
+                active ? typography.bodyStrong : typography.body,
+                { color: active ? colors.onPrimary : colors.text },
+              ]}>
+              {active ? `✓ ${option.label}` : option.label}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}

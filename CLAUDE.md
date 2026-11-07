@@ -25,6 +25,7 @@ Personal pet food inventory app. The full spec is `KIBBLR_DESIGN.md`. Build one 
 - TypeScript strict, no `any`. Zod-parse all data from Firestore and the Worker at the boundary.
 - Pure logic goes in `packages/core` with unit tests written first (Vitest). App tests use Jest (`jest-expo`).
 - All stock changes go through `applyStockChange` (`src/features/inventory/stock.ts`), which runs the one transaction in `src/firebase/repositories/stock.ts`. Never write `onHand` anywhere else. Stock math (clamping, rounding, units) lives in `@kibblr/core`.
+- Stock changes made through `useStockActions` may open the rating sheet (`app/rate/[productId].tsx`, through `maybePromptRating` in `src/features/ratings/prompt.ts`). Undo and `auto` never do.
 - Firestore access only through `src/firebase/repositories`; screens use hooks, never raw SDK calls.
 - Any rules change gets an emulator test in `firebase/test/`.
 - Colors, spacing and type come from `src/theme` (`useTheme()`). No hard-coded hex values in components.

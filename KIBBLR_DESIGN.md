@@ -266,6 +266,9 @@ Prompt "How did {pet} like it?" at two moments, both dismissible and never block
 - When `onHand` reaches 0 for a product.
 - The first time a product is used (Use mode) after being added.
 Prompt has three reaction buttons, an optional comment, and a Reorder / Skip / Undecided chip row.
+- "First used" means the change is the product's first `remove` event in the ledger. Any use counts (scanner, product detail, swipe); `auto` and Undo never prompt.
+- Each prompt shows at most once per product per app session, as a sheet over whatever is open (the scanner included).
+- It asks about the product's `petIds`, or every active pet when none are set, with a chip to pick between them.
 
 ### 6.6 Shopping tab
 - Products that are low/out **and** verdict is not `skip`, sorted by runway.
@@ -409,6 +412,6 @@ All functions are pure and unit-tested.
 
 ## 15. Open questions (ask me before assuming)
 1. Bundle ID owner string.
-2. Which pets and species to seed on first run.
+2. ~~Which pets and species to seed on first run.~~ Answered: none. The Pets tab starts empty.
 3. Preferred default units (lb/oz vs kg/g) on the input forms.
 4. Whether wet food multipacks should default the scan multiplier to 12 or 1.
