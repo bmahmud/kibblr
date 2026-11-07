@@ -49,6 +49,8 @@ export function lookupFormInput(
       category,
       container: lookup.container ?? defaultContainer(category),
       size: lookup.size ?? null,
+      petIds: [],
+      reorderUrl: null,
     },
     preferred,
   );
