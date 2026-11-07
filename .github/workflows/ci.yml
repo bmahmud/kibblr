@@ -65,5 +65,5 @@ jobs:
       - name: Rules tests
         run: npm run test:rules
 
-  # Phase 4 adds the barcode Worker; its tests run through `npm test` via workspaces.
+  # The barcode Worker's tests run in the "check" job through `npm test` (workspaces).
   # EAS builds are triggered manually, never from CI.

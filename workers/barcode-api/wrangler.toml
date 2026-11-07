@@ -1,0 +1,24 @@
+# Barcode lookup Worker (spec section 7). Deploy with `npm run deploy -w @kibblr/barcode-api`.
+name = "kibblr-barcode-api"
+main = "src/index.ts"
+compatibility_date = "2026-10-01"
+workers_dev = true
+
+[vars]
+FIREBASE_PROJECT_ID = "kibblr"
+
+# Created with `npx wrangler kv namespace create BARCODE_CACHE`.
+[[kv_namespaces]]
+binding = "BARCODE_CACHE"
+id = "612d26b2cfd847dc8ac39485d8e20cca"
+
+# 30 lookups per minute per signed-in user. The Worker runs without it if the binding is missing.
+[[ratelimits]]
+name = "LOOKUP_LIMITER"
+namespace_id = "1001"
+
+  [ratelimits.simple]
+  limit = 30
+  period = 60
+
+# Optional secret: `npx wrangler secret put UPCITEMDB_KEY`. Without it the free trial endpoint is used.

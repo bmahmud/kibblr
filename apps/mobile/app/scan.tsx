@@ -43,6 +43,8 @@ const MULTIPLIERS: { value: MultiplierChoice; label: string }[] = [
   { value: 'custom', label: 'Custom' },
 ];
 
+function noop() {}
+
 function isBarcodeHint(type: string): type is BarcodeHint {
   return (BARCODE_TYPES as string[]).includes(type);
 }
@@ -217,7 +219,17 @@ export default function ScanScreen() {
             <QuickUsePanel pending={flow.pendingUse} onUse={flow.applyUse} onCancel={flow.cancelUse} />
           ) : (
             <>
-              {flow.busy ? <ActivityIndicator color={colors.primary} /> : null}
+              {flow.busy && !flow.lookingUp ? <ActivityIndicator color={colors.primary} /> : null}
+              {flow.lookingUp ? (
+                <ResultCard
+                  sticky
+                  result={{
+                    message: 'Not in your inventory yet. Looking it up…',
+                    action: { label: 'Skip', onPress: flow.skipLookup },
+                  }}
+                  onDismiss={noop}
+                />
+              ) : null}
               {flow.result ? <ResultCard result={flow.result} onDismiss={flow.dismiss} /> : null}
 
               <Chips label="Scan mode" options={MODES} selected={mode} onSelect={setMode} />

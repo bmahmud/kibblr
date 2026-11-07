@@ -52,15 +52,21 @@ export const lowStockRuleSchema = z.object({
   value: z.number().positive(),
 });
 
+export const NAME_MAX = 120;
+export const BRAND_MAX = 80;
+
+/** Net weight or volume of one package, in whole g or ml. */
+export const sizeSchema = z.object({ amount: z.number().positive(), unit: z.enum(BASE_UNITS) });
+
 export const productSchema = z.object({
   /** Normalized GTIN-13; null for products added without a barcode. */
   barcode: z.string().regex(/^\d{13}$/).nullable(),
-  name: z.string().trim().min(1).max(120),
-  brand: z.string().trim().max(80),
+  name: z.string().trim().min(1).max(NAME_MAX),
+  brand: z.string().trim().max(BRAND_MAX),
   category: z.enum(CATEGORIES),
   container: z.enum(CONTAINERS),
-  /** Net weight or volume of one package, for display; null when not entered. */
-  size: z.object({ amount: z.number().positive(), unit: z.enum(BASE_UNITS) }).nullable(),
+  /** For display; null when not entered. */
+  size: sizeSchema.nullable(),
   /** Packages on hand. */
   onHand: amount,
   /** Packages per day, all pets combined. */

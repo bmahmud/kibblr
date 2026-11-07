@@ -41,3 +41,8 @@ export type { BarcodeHint } from './gtin';
 
 export { QUICK_USE, SCAN_DEBOUNCE_MS, parseMultiplier, scanUseAction, shouldHandleScan } from './scan';
 export type { LastScan } from './scan';
+
+export { parseSizeText } from './size';
+
+export { LOOKUP_SOURCES, LOOKUP_SOURCE_LABELS, barcodeLookupSchema, lookupFormInput } from './lookup';
+export type { BarcodeLookup, LookupSource } from './lookup';

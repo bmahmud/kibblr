@@ -9,18 +9,26 @@ import type { ScanResult } from './use-scan-flow';
 type Props = {
   result: ScanResult;
   onDismiss: () => void;
+  /** Stays until replaced, e.g. while a lookup runs. */
+  sticky?: boolean;
 };
 
 /** The scanner's stand-in for the toast: message plus Undo (or another action), gone after 6 seconds. */
-export function ResultCard({ result, onDismiss }: Props) {
+export function ResultCard({ result, onDismiss, sticky = false }: Props) {
   const { colors, radius, spacing, typography, touchTarget } = useTheme();
   const error = result.tone === 'error';
 
   useEffect(() => {
     AccessibilityInfo.announceForAccessibility(result.message);
+  }, [result.message]);
+
+  useEffect(() => {
+    if (sticky) {
+      return;
+    }
     const timer = setTimeout(onDismiss, TOAST_MS);
     return () => clearTimeout(timer);
-  }, [result, onDismiss]);
+  }, [result, onDismiss, sticky]);
 
   return (
     <View

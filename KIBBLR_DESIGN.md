@@ -297,9 +297,9 @@ Purpose: hide the third-party API key, normalize results, and cache so each barc
 ### 7.1 Endpoint
 `GET /v1/barcode/:code`
 - Header: `Authorization: Bearer <Firebase ID token>`.
-- `200`: `{ barcode, name, brand, category?, container?, size?: { amount, unit: 'g' | 'ml' }, imageUrl?, source, cached }`.
-- `404`: `{ error: "not_found" }`.
-- `400`: invalid code. `401`: bad token. `502`: all upstreams failed.
+- `200`: `{ barcode, name, brand, category?, container?, size?: { amount, unit: 'g' | 'ml' }, imageUrl?, source, cached }`. Here `source` is the database that answered (`openpetfoodfacts | openfoodfacts | upcitemdb`), not the product's `manual | lookup`. The schema is `barcodeLookupSchema` in `packages/core`.
+- `404`: `{ error: "not_found" }`: every upstream said it doesn't know the code (cached 1 day).
+- `400`: invalid code. `401`: bad token. `429`: rate limited. `502`: an upstream failed and none found it (not cached).
 - `GET /health` for a trivial check (no auth).
 
 ### 7.2 Behavior
@@ -330,7 +330,7 @@ All functions are pure and unit-tested.
   - mode `days`: `runwayDays <= value` (if runway is null, fall back to `onHand <= 1`: the last package is low).
   - mode `amount`: `onHand <= value` (packages).
   - Out is `onHand === 0`.
-- `learnedRate(events)`: from `remove` events with method `scan|manual|feeding` over the last 30 days, `sum(delta) / days_covered`. Needs at least 7 days of data; otherwise `null`. Phase 4.
+- `learnedRate(events)`: from `remove` events with method `scan|manual|feeding` over the last 30 days, `sum(delta) / days_covered`. Needs at least 7 days of data; otherwise `null`. Phase 6.
 - `autoDeduct`: on app foreground, for each product with `autoDeduct && dailyUsage`, compute whole days since `lastAutoDeductAt` and call `applyStockChange` once with `method: 'auto'`, then set `lastAutoDeductAt`. Idempotent per day.
 - Package counts: format with container plurals ("1 can", "12 cans", "1.5 bags"); round to hundredths when stored.
 - Size units (lb, oz, kg, g, cup, fl oz, ml) with parse/format helpers: stored as whole g/ml, displayed with one decimal.
