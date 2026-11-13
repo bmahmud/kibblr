@@ -9,6 +9,7 @@ import { Button } from '@/components/button';
 import { Chips } from '@/components/chips';
 import { EmptyState } from '@/components/empty-state';
 import { TextField } from '@/components/text-field';
+import { TabHeader } from '@/components/tab-header';
 import { CATEGORY_DISPLAY } from '@/features/inventory/category';
 import { useHouseholdSettings, useProducts } from '@/features/inventory/hooks';
 import { InventoryRow } from '@/features/inventory/inventory-row';
@@ -62,10 +63,7 @@ export default function InventoryScreen() {
         gap: spacing.md,
         backgroundColor: colors.background,
       }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-        <Text accessibilityRole="header" style={[typography.display, { color: colors.text, flex: 1 }]}>
-          Inventory
-        </Text>
+      <TabHeader title="Inventory">
         <Link href="/scan" asChild>
           <Pressable
             accessibilityRole="button"
@@ -93,7 +91,7 @@ export default function InventoryScreen() {
             <Text style={[typography.bodyStrong, { color: colors.onPrimary }]}>+ Add</Text>
           </Pressable>
         </Link>
-      </View>
+      </TabHeader>
       {all.length > 0 ? (
         <>
           <TextField

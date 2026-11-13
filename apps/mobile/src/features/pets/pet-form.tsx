@@ -6,10 +6,10 @@ import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollVie
 import { Button } from '@/components/button';
 import { Chips } from '@/components/chips';
 import { TextField } from '@/components/text-field';
+import { PET_PHOTO_SIZE, pickPhoto } from '@/features/photos/pick-photo';
+import type { PhotoSource } from '@/features/photos/pick-photo';
 import { useTheme } from '@/theme';
 
-import { pickPetPhoto } from './photo';
-import type { PhotoSource } from './photo';
 import { PetPhoto } from './pet-photo';
 import { SPECIES_ICONS } from './species';
 
@@ -39,7 +39,7 @@ export function PetForm({ initial, submitLabel, onSubmit }: Props) {
     setPhotoError(null);
     setLoadingPhoto(source);
     try {
-      const result = await pickPetPhoto(source);
+      const result = await pickPhoto(source, PET_PHOTO_SIZE);
       if (result.status === 'picked') {
         setForm((current) => ({ ...current, photo: result.photo }));
       } else if (result.status !== 'canceled') {
