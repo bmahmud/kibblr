@@ -129,6 +129,7 @@ export function newProductDraft(
     autoDeduct: false,
     lastAutoDeductAt: null,
     lowStock: null,
+    ratedBy: [],
     verdict: 'undecided',
     verdictNote: null,
     imageUrl: lookup?.imageUrl ?? null,

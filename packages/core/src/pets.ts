@@ -1,4 +1,4 @@
-import type { Pet, Species } from './schemas';
+import type { Pet, Product, Species } from './schemas';
 
 export const PET_NAME_MAX = 40;
 
@@ -9,7 +9,7 @@ export const SPECIES_LABELS: Record<Species, string> = {
 };
 
 /** The pet fields the Add / Edit pet form edits. */
-export type PetFields = Pick<Pet, 'name' | 'species'>;
+export type PetFields = Pick<Pet, 'name' | 'species' | 'photo'>;
 
 export type PetFormResult = { ok: true; fields: PetFields } | { ok: false; errors: { name?: string } };
 
@@ -21,7 +21,7 @@ export function validatePetForm(input: PetFields): PetFormResult {
   if (name.length > PET_NAME_MAX) {
     return { ok: false, errors: { name: `Keep the name under ${PET_NAME_MAX} characters.` } };
   }
-  return { ok: true, fields: { name, species: input.species } };
+  return { ok: true, fields: { name, species: input.species, photo: input.photo } };
 }
 
 /** A new pet; `createdAt` is set on write. */
@@ -35,6 +35,20 @@ export function newPetDraft(fields: PetFields): PetDraft {
 export function activePets<T extends Pick<Pet, 'name' | 'archived'>>(pets: readonly T[]): T[] {
   return pets
     .filter((pet) => !pet.archived)
+    .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
+}
+
+/**
+ * A pet's foods (spec section 6.7): the products it eats and the ones it has
+ * rated, by name. A rated product isn't always eaten ("refused"), but its
+ * rating still belongs on the pet's page.
+ */
+export function petFoods<T extends Pick<Product, 'name' | 'petIds' | 'ratedBy'>>(
+  products: readonly T[],
+  petId: string,
+): T[] {
+  return products
+    .filter((p) => p.petIds.includes(petId) || p.ratedBy.includes(petId))
     .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
 }
 

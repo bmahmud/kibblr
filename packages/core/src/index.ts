@@ -47,7 +47,7 @@ export { parseSizeText } from './size';
 export { LOOKUP_SOURCES, LOOKUP_SOURCE_LABELS, barcodeLookupSchema, lookupFormInput } from './lookup';
 export type { BarcodeLookup, LookupSource } from './lookup';
 
-export { PET_NAME_MAX, SPECIES_LABELS, activePets, newPetDraft, petInitials, validatePetForm } from './pets';
+export { PET_NAME_MAX, SPECIES_LABELS, activePets, newPetDraft, petFoods, petInitials, validatePetForm } from './pets';
 export type { PetDraft, PetFields, PetFormResult } from './pets';
 
 export {

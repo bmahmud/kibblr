@@ -23,5 +23,5 @@ export default function NewPetScreen() {
     router.back();
   }
 
-  return <PetForm initial={{ name: '', species: 'cat' }} submitLabel="Add pet" onSubmit={save} />;
+  return <PetForm initial={{ name: '', species: 'cat', photo: null }} submitLabel="Add pet" onSubmit={save} />;
 }

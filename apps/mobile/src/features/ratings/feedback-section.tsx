@@ -8,7 +8,7 @@ import {
   validateNote,
 } from '@kibblr/core';
 import type { Product, Verdict, WithId } from '@kibblr/core';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, Linking, Pressable, Text, View } from 'react-native';
 
 import { Button } from '@/components/button';
@@ -18,7 +18,9 @@ import { useToast } from '@/components/toast';
 import { useSignedIn } from '@/features/auth/auth-provider';
 import { inventoryErrorMessage } from '@/features/inventory/errors';
 import { usePets } from '@/features/pets/hooks';
+import { PetPhoto } from '@/features/pets/pet-photo';
 import { updateProduct } from '@/firebase/repositories/products';
+import { markRatedBy } from '@/firebase/repositories/ratings';
 import { useTheme } from '@/theme';
 
 import { useRatings } from './hooks';
@@ -47,6 +49,17 @@ export function FeedbackSection({ product }: { product: WithId<Product> }) {
   const latest = latestRatingByPet(history);
   const petName = (petId: string) => allPets.find((pet) => pet.id === petId)?.name ?? 'A pet';
   const noteChanged = note.trim() !== (product.verdictNote ?? '');
+  // Ratings saved before `ratedBy` existed: record their pets so the pet's page lists this product.
+  const unmarked = [...latest.keys()].filter((petId) => !product.ratedBy.includes(petId)).join(',');
+
+  useEffect(() => {
+    if (!unmarked) {
+      return;
+    }
+    markRatedBy(householdId, product.id, unmarked.split(',')).catch((error: unknown) =>
+      console.warn(`Couldn't update ratedBy on ${product.id}.`, error),
+    );
+  }, [householdId, product.id, unmarked]);
 
   async function setVerdict(verdict: Verdict) {
     if (verdict === product.verdict) {
@@ -106,6 +119,7 @@ export function FeedbackSection({ product }: { product: WithId<Product> }) {
                 borderRadius: radius.md,
                 backgroundColor: pressed ? colors.surfaceRaised : colors.background,
               })}>
+              <PetPhoto pet={pet} size={32} />
               <Text style={[typography.body, { color: colors.text, flex: 1 }]}>{pet.name}</Text>
               <Text style={[typography.body, { color: rating ? colors.text : colors.textMuted }]}>
                 {rating ? `${REACTION_ICONS[rating.reaction]} ${REACTION_LABELS[rating.reaction]}` : 'Rate'}

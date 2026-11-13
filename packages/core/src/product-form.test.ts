@@ -139,6 +139,7 @@ describe('newProductDraft', () => {
       lastAutoDeductAt: null,
       lowStock: null,
       petIds: ['pet-1'],
+      ratedBy: [],
       verdict: 'undecided',
       verdictNote: null,
       reorderUrl: null,

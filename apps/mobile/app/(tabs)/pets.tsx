@@ -1,4 +1,4 @@
-import { SPECIES_LABELS, activePets } from '@kibblr/core';
+import { SPECIES_LABELS, activePets, petFoods } from '@kibblr/core';
 import type { Pet, WithId } from '@kibblr/core';
 import { router } from 'expo-router';
 import { useState } from 'react';
@@ -9,7 +9,7 @@ import { Button } from '@/components/button';
 import { EmptyState } from '@/components/empty-state';
 import { useProducts } from '@/features/inventory/hooks';
 import { usePets } from '@/features/pets/hooks';
-import { SPECIES_ICONS } from '@/features/pets/species';
+import { PetPhoto } from '@/features/pets/pet-photo';
 import { useTheme } from '@/theme';
 
 /** Pets (spec section 6.7): add, open, and archived ones kept out of the way. */
@@ -25,10 +25,9 @@ export default function PetsScreen() {
   const archived = all
     .filter((pet) => pet.archived)
     .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
-  const foodCount = (petId: string) =>
-    products.status === 'ready' ? products.data.filter((p) => p.petIds.includes(petId)).length : null;
+  const foodCount = (petId: string) => (products.status === 'ready' ? petFoods(products.data, petId).length : null);
 
-  function row(pet: WithId<Pet>) {
+  function row(pet: WithId<Pet>, index: number) {
     const count = foodCount(pet.id);
     const detail = [SPECIES_LABELS[pet.species], count === null ? null : `${count} ${count === 1 ? 'food' : 'foods'}`]
       .filter(Boolean)
@@ -40,22 +39,41 @@ export default function PetsScreen() {
         accessibilityLabel={`${pet.name}, ${detail}`}
         onPress={() => router.push({ pathname: '/pet/[id]', params: { id: pet.id } })}
         style={({ pressed }) => ({
-          minHeight: touchTarget + spacing.lg,
           flexDirection: 'row',
           alignItems: 'center',
           gap: spacing.md,
-          paddingHorizontal: spacing.lg,
-          borderRadius: radius.lg,
+          paddingLeft: spacing.lg,
           backgroundColor: pressed ? colors.surfaceRaised : colors.surface,
           opacity: pet.archived ? 0.7 : 1,
         })}>
-        <Text style={typography.title}>{SPECIES_ICONS[pet.species]}</Text>
-        <View style={{ flex: 1, gap: 2 }}>
-          <Text style={[typography.bodyStrong, { color: colors.text }]}>{pet.name}</Text>
-          <Text style={[typography.caption, { color: colors.textMuted }]}>{detail}</Text>
+        <PetPhoto pet={pet} size={48} />
+        <View
+          style={{
+            flex: 1,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: spacing.sm,
+            minHeight: touchTarget + spacing.xl,
+            paddingRight: spacing.lg,
+            // Separator inset past the photo, like an iOS grouped list.
+            borderTopWidth: index === 0 ? 0 : 1,
+            borderTopColor: colors.border,
+          }}>
+          <View style={{ flex: 1, gap: 2 }}>
+            <Text style={[typography.bodyStrong, { color: colors.text }]}>{pet.name}</Text>
+            <Text style={[typography.caption, { color: colors.textMuted }]}>{detail}</Text>
+          </View>
+          <Text style={[typography.body, { color: colors.textMuted }]}>›</Text>
         </View>
-        <Text style={[typography.body, { color: colors.textMuted }]}>›</Text>
       </Pressable>
+    );
+  }
+
+  function group(list: WithId<Pet>[]) {
+    return (
+      <View style={{ borderRadius: radius.lg, backgroundColor: colors.surface, overflow: 'hidden' }}>
+        {list.map(row)}
+      </View>
     );
   }
 
@@ -103,7 +121,7 @@ export default function PetsScreen() {
         </EmptyState>
       ) : null}
 
-      {active.map(row)}
+      {active.length > 0 ? group(active) : null}
 
       {archived.length > 0 ? (
         <>
@@ -117,7 +135,7 @@ export default function PetsScreen() {
               {showArchived ? '▾' : '▸'} Archived · {archived.length}
             </Text>
           </Pressable>
-          {showArchived ? archived.map(row) : null}
+          {showArchived ? group(archived) : null}
         </>
       ) : null}
     </ScrollView>

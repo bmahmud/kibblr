@@ -53,8 +53,9 @@ function RootStack() {
 
   // The sign-in screen also covers 'loading' after a tap and 'error', so it
   // stays mounted (keeping its spinner or retry) until the household is ready.
+  // Back buttons show only the chevron: the tab group's route name, "(tabs)", is not a title.
   return (
-    <Stack>
+    <Stack screenOptions={{ headerBackButtonDisplayMode: 'minimal' }}>
       <Stack.Protected guard={signedIn}>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="scan" options={{ presentation: 'fullScreenModal', headerShown: false }} />

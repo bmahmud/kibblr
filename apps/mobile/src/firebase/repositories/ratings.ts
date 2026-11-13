@@ -1,10 +1,22 @@
 import { ratingSchema } from '@kibblr/core';
 import type { Rating, WithId } from '@kibblr/core';
-import { addDoc, collection, limit, onSnapshot, orderBy, query, serverTimestamp } from 'firebase/firestore';
+import {
+  arrayUnion,
+  collection,
+  doc,
+  limit,
+  onSnapshot,
+  orderBy,
+  query,
+  serverTimestamp,
+  updateDoc,
+  writeBatch,
+} from 'firebase/firestore';
 import type { Unsubscribe } from 'firebase/firestore';
 
 import { zodConverter } from '../converters';
 import { db } from '../init';
+import { productPath } from './products';
 
 const ratingConverter = zodConverter(ratingSchema);
 
@@ -39,11 +51,30 @@ export function watchRatings(
   );
 }
 
+/**
+ * Saves a rating and adds the pet to the product's `ratedBy` in one batch, so
+ * the pet's page lists the product even when the pet isn't in `petIds`.
+ */
 export async function addRating(
   householdId: string,
   productId: string,
   rating: Omit<Rating, 'createdAt'>,
 ): Promise<string> {
-  const ref = await addDoc(ratingsPath(householdId, productId), { ...rating, createdAt: serverTimestamp() });
+  const ref = doc(ratingsPath(householdId, productId));
+  const batch = writeBatch(db);
+  batch.set(ref, { ...rating, createdAt: serverTimestamp() });
+  batch.update(productPath(householdId, productId), {
+    ratedBy: arrayUnion(rating.petId),
+    updatedAt: serverTimestamp(),
+  });
+  await batch.commit();
   return ref.id;
+}
+
+/** Adds pets to `ratedBy`; for ratings saved before the field existed. */
+export function markRatedBy(householdId: string, productId: string, petIds: string[]): Promise<void> {
+  return updateDoc(productPath(householdId, productId), {
+    ratedBy: arrayUnion(...petIds),
+    updatedAt: serverTimestamp(),
+  });
 }

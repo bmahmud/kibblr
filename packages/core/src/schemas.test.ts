@@ -18,7 +18,7 @@ const household = {
   createdAt: now,
 };
 
-const pet = { name: 'Miso', species: 'cat', archived: false, createdAt: now };
+const pet = { name: 'Miso', species: 'cat', photo: null, archived: false, createdAt: now };
 
 const product = {
   barcode: '0012345678905',
@@ -33,6 +33,7 @@ const product = {
   lastAutoDeductAt: null,
   lowStock: null,
   petIds: ['pet-1'],
+  ratedBy: ['pet-1'],
   verdict: 'undecided',
   verdictNote: null,
   reorderUrl: 'https://example.com/food',
@@ -99,6 +100,12 @@ describe('petSchema', () => {
 describe('productSchema', () => {
   it('accepts a valid product', () => {
     expect(productSchema.parse(product)).toEqual(product);
+  });
+
+  it('defaults ratedBy to none for products saved before it existed', () => {
+    const older: Partial<typeof product> = { ...product };
+    delete older.ratedBy;
+    expect(productSchema.parse(older).ratedBy).toEqual([]);
   });
 
   it('accepts a manual product with no barcode and an empty brand', () => {

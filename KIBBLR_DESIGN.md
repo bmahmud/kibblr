@@ -128,6 +128,7 @@ households/{hid}
 households/{hid}/pets/{petId}
   name: string
   species: 'cat' | 'dog' | 'other'
+  photo: string | null                 # 256 px JPEG data URI, at most 200 000 chars
   archived: boolean
   createdAt: Timestamp
 
@@ -144,6 +145,7 @@ households/{hid}/products/{productId}
   lastAutoDeductAt: Timestamp | null
   lowStock: { mode: 'days' | 'amount', value: number } | null   # null = household default
   petIds: string[]                     # pets that eat this
+  ratedBy: string[]                    # pets with a rating of this, for the Pets view
   verdict: 'reorder' | 'skip' | 'undecided'
   verdictNote: string | null
   reorderUrl: string | null            # where I buy it
@@ -278,6 +280,8 @@ Prompt has three reaction buttons, an optional comment, and a Reorder / Skip / U
 
 ### 6.7 Pets
 CRUD for pets; archive instead of delete. Per-pet view lists products they eat and their ratings.
+- "Products they eat" means the product's `petIds` or `ratedBy` includes the pet, so a rating always shows on the pet's page.
+- A pet can have a photo, taken or picked and cropped square. It is stored on the pet document as a small JPEG (no Cloud Storage), and shown wherever the pet appears.
 
 ### 6.8 Settings
 Notification toggle and hour, default low-stock days, weight unit, sign out, export data (JSON via share sheet), app version.

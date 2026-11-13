@@ -37,5 +37,5 @@ export default function EditPetScreen() {
     }
   }
 
-  return <PetForm key={pet.id} initial={{ name: pet.name, species: pet.species }} submitLabel="Save" onSubmit={save} />;
+  return <PetForm key={pet.id} initial={{ name: pet.name, species: pet.species, photo: pet.photo }} submitLabel="Save" onSubmit={save} />;
 }

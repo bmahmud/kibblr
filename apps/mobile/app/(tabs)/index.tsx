@@ -40,7 +40,7 @@ export default function InventoryScreen() {
   const allPets = pets.status === 'ready' ? pets.data : [];
   const filterPets = activePets(allPets);
   // Archived pets drop out of the avatars too.
-  const petNames = new Map(filterPets.map((pet) => [pet.id, pet.name]));
+  const petsById = new Map(filterPets.map((pet) => [pet.id, pet]));
   // A pet archived while selected falls back to everyone.
   const petId = filterPets.some((pet) => pet.id === petFilter) ? petFilter : null;
 
@@ -182,9 +182,9 @@ export default function InventoryScreen() {
           product={item.product}
           status={item.status}
           unit={settings.preferredWeightUnit}
-          petNames={item.product.petIds.flatMap((id) => {
-            const name = petNames.get(id);
-            return name ? [name] : [];
+          pets={item.product.petIds.flatMap((id) => {
+            const pet = petsById.get(id);
+            return pet ? [pet] : [];
           })}
           onAdd={() => void actions.change(item.product.id, 1)}
           onUse={() => void actions.change(item.product.id, -1)}
