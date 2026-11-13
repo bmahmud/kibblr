@@ -1,4 +1,4 @@
-import { CATEGORIES, groupInventory } from '@kibblr/core';
+import { CATEGORIES, activePets, groupInventory } from '@kibblr/core';
 import type { Category } from '@kibblr/core';
 import { Link, router } from 'expo-router';
 import { useState } from 'react';
@@ -13,6 +13,7 @@ import { CATEGORY_DISPLAY } from '@/features/inventory/category';
 import { useHouseholdSettings, useProducts } from '@/features/inventory/hooks';
 import { InventoryRow } from '@/features/inventory/inventory-row';
 import { useStockActions } from '@/features/inventory/use-stock-actions';
+import { usePets } from '@/features/pets/hooks';
 import { useTheme } from '@/theme';
 
 type CategoryFilter = Category | 'all';
@@ -33,11 +34,21 @@ export default function InventoryScreen() {
   const actions = useStockActions();
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState<CategoryFilter>('all');
+  const pets = usePets();
+  const [petFilter, setPetFilter] = useState<string>('all');
+
+  const allPets = pets.status === 'ready' ? pets.data : [];
+  const filterPets = activePets(allPets);
+  // Archived pets drop out of the avatars too.
+  const petsById = new Map(filterPets.map((pet) => [pet.id, pet]));
+  // A pet archived while selected falls back to everyone.
+  const petId = filterPets.some((pet) => pet.id === petFilter) ? petFilter : null;
 
   const all = products.status === 'ready' ? products.data : [];
   const { lowOrOut, ok } = groupInventory(all, settings, {
     query,
     category: category === 'all' ? null : category,
+    petId,
   });
   const sections = [
     { title: `Low / Out · ${lowOrOut.length}`, data: lowOrOut },
@@ -96,6 +107,18 @@ export default function InventoryScreen() {
             returnKeyType="search"
           />
           <Chips label="Category" options={CATEGORY_FILTERS} selected={category} onSelect={setCategory} scroll />
+          {filterPets.length > 0 ? (
+            <Chips
+              label="Pet"
+              options={[
+                { value: 'all', label: 'All pets' },
+                ...filterPets.map((pet) => ({ value: pet.id, label: pet.name })),
+              ]}
+              selected={petId ?? 'all'}
+              onSelect={setPetFilter}
+              scroll
+            />
+          ) : null}
         </>
       ) : null}
     </View>
@@ -117,7 +140,7 @@ export default function InventoryScreen() {
         </EmptyState>
       );
     }
-    return <EmptyState title="No matches" body="Try another search or category." />;
+    return <EmptyState title="No matches" body="Try another search, category or pet." />;
   }
 
   return (
@@ -159,6 +182,10 @@ export default function InventoryScreen() {
           product={item.product}
           status={item.status}
           unit={settings.preferredWeightUnit}
+          pets={item.product.petIds.flatMap((id) => {
+            const pet = petsById.get(id);
+            return pet ? [pet] : [];
+          })}
           onAdd={() => void actions.change(item.product.id, 1)}
           onUse={() => void actions.change(item.product.id, -1)}
         />

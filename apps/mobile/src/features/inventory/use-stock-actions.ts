@@ -4,6 +4,7 @@ import type { EventMethod } from '@kibblr/core';
 import { useToast } from '@/components/toast';
 import type { ToastOptions } from '@/components/toast';
 import { useSignedIn } from '@/features/auth/auth-provider';
+import { maybePromptRating } from '@/features/ratings/prompt';
 
 import { inventoryErrorMessage } from './errors';
 import { stockChangeMessage } from './messages';
@@ -13,6 +14,9 @@ import type { StockChangeResult } from './stock';
 /**
  * Stock changes with the toast and Undo (spec section 6.10). Each action
  * resolves to the result, or null if it failed (the message already says why).
+ *
+ * A use that empties a product, or is its first, then asks for a rating
+ * (spec section 6.5).
  *
  * `notify` replaces the toast where it can't be seen, such as the scanner,
  * a full-screen modal that covers it.
@@ -46,6 +50,8 @@ export function useStockActions(notify?: (options: ToastOptions) => void) {
           ? { message }
           : { message, action: { label: 'Undo', onPress: () => void undo(result, method) } },
       );
+      // Undo comes through `undo` above, so it never prompts.
+      void maybePromptRating(householdId, result, method);
       return result;
     } catch (error) {
       show({ message: inventoryErrorMessage(error), tone: 'error' });

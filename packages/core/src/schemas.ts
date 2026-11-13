@@ -40,9 +40,14 @@ export const userDocSchema = z.object({
   householdId: id,
 });
 
+/** Longest pet photo, in characters: a 256 px JPEG is about 20 000 (spec section 6.7). */
+export const PET_PHOTO_MAX = 200_000;
+
 export const petSchema = z.object({
   name: z.string().trim().min(1).max(40),
   species: z.enum(SPECIES),
+  /** A small JPEG data URI stored on the pet itself; null when there is none. */
+  photo: z.string().startsWith('data:image/jpeg;base64,').max(PET_PHOTO_MAX).nullable().default(null),
   archived: z.boolean(),
   createdAt: timestamp,
 });
@@ -76,6 +81,8 @@ export const productSchema = z.object({
   /** null means "use the household default". */
   lowStock: lowStockRuleSchema.nullable(),
   petIds: z.array(id),
+  /** Pets with a rating of this product, so a pet's page finds it without reading every product's ratings. */
+  ratedBy: z.array(id).default([]),
   verdict: z.enum(VERDICTS),
   verdictNote: z.string().max(500).nullable(),
   reorderUrl: httpUrl.nullable(),

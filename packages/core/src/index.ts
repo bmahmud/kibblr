@@ -46,3 +46,20 @@ export { parseSizeText } from './size';
 
 export { LOOKUP_SOURCES, LOOKUP_SOURCE_LABELS, barcodeLookupSchema, lookupFormInput } from './lookup';
 export type { BarcodeLookup, LookupSource } from './lookup';
+
+export { PET_NAME_MAX, SPECIES_LABELS, activePets, newPetDraft, petFoods, petInitials, validatePetForm } from './pets';
+export type { PetDraft, PetFields, PetFormResult } from './pets';
+
+export {
+  NOTE_MAX,
+  REACTION_LABELS,
+  VERDICT_LABELS,
+  latestRatingByPet,
+  promptPets,
+  ratingPromptReason,
+  validateNote,
+} from './ratings';
+export type { RatingPromptReason } from './ratings';
+
+export { shoppingList, shoppingListText } from './shopping';
+export type { ShoppingItem, ShoppingProduct } from './shopping';
