@@ -36,7 +36,7 @@ export type { ProductDraft, ProductFields, ProductFormErrors, ProductFormInput, 
 
 export { formatRelativeTime } from './time';
 
-export { expandUpcE, isValidGtin, normalizeGtin } from './gtin';
+export { ean13Modules, expandUpcE, formatGtin13, isValidGtin, normalizeGtin } from './gtin';
 export type { BarcodeHint } from './gtin';
 
 export { QUICK_USE, SCAN_DEBOUNCE_MS, parseMultiplier, scanUseAction, shouldHandleScan } from './scan';

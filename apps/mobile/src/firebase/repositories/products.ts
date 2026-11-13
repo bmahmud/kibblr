@@ -10,6 +10,7 @@ import {
   serverTimestamp,
   updateDoc,
   where,
+  writeBatch,
 } from 'firebase/firestore';
 import type { Unsubscribe } from 'firebase/firestore';
 
@@ -127,4 +128,18 @@ export async function updateProduct(householdId: string, productId: string, patc
 
 export function setProductArchived(householdId: string, productId: string, archived: boolean): Promise<void> {
   return updateProduct(householdId, productId, { archived });
+}
+
+/**
+ * Deletes a product and its ratings in one batch. Its events stay: the ledger
+ * is append-only, and History skips events whose product is gone.
+ */
+export async function deleteProduct(householdId: string, productId: string): Promise<void> {
+  const ratings = await getDocs(collection(productPath(householdId, productId), 'ratings'));
+  const batch = writeBatch(db);
+  for (const rating of ratings.docs) {
+    batch.delete(rating.ref);
+  }
+  batch.delete(productPath(householdId, productId));
+  await batch.commit();
 }
