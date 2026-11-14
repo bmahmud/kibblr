@@ -1,4 +1,4 @@
-import { CONTAINER_LABELS, formatCount, formatSize, shoppingList, shoppingListText } from '@kibblr/core';
+import { CONTAINER_LABELS, formatCount, formatRunway, formatSize, shoppingList, shoppingListText } from '@kibblr/core';
 import type { Product, ShoppingItem, WithId } from '@kibblr/core';
 import * as Clipboard from 'expo-clipboard';
 import { router } from 'expo-router';
@@ -13,7 +13,7 @@ import { useToast } from '@/components/toast';
 import { VerdictBadge } from '@/components/verdict-badge';
 import { TabHeader } from '@/components/tab-header';
 import { CATEGORY_DISPLAY } from '@/features/inventory/category';
-import { useHouseholdSettings, useProducts } from '@/features/inventory/hooks';
+import { rateOf, useHouseholdSettings, useLearnedRates, useProducts } from '@/features/inventory/hooks';
 import { useTheme } from '@/theme';
 
 /**
@@ -29,7 +29,8 @@ export default function ShoppingScreen() {
   const [showSkipped, setShowSkipped] = useState(false);
   const unit = settings.preferredWeightUnit;
 
-  const { toBuy, notReordering } = shoppingList(products.status === 'ready' ? products.data : [], settings);
+  const learned = rateOf(useLearnedRates());
+  const { toBuy, notReordering } = shoppingList(products.status === 'ready' ? products.data : [], settings, learned);
 
   function share() {
     Share.share({ message: shoppingListText(toBuy, unit) }).catch(() =>
@@ -58,9 +59,7 @@ export default function ShoppingScreen() {
       product.brand,
       product.size ? `${formatSize(product.size, unit)} ${label.one}` : null,
       left,
-      runway === null || status === 'out'
-        ? null
-        : `~${Math.floor(runway)} ${Math.floor(runway) === 1 ? 'day' : 'days'}`,
+      runway === null || status === 'out' ? null : formatRunway(runway),
     ]
       .filter(Boolean)
       .join(' · ');

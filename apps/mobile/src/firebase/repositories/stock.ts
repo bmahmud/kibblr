@@ -1,4 +1,4 @@
-import { computeAdjustment, computeStockChange } from '@kibblr/core';
+import { autoDeductPlan, computeAdjustment, computeStockChange } from '@kibblr/core';
 import type { EventMethod, Product, StockChange, WithId } from '@kibblr/core';
 import { doc, runTransaction, serverTimestamp } from 'firebase/firestore';
 
@@ -13,7 +13,12 @@ export type StockWrite = {
   method: EventMethod;
   petId: string | null;
   note: string | null;
-} & ({ kind: 'delta'; delta: number } | { kind: 'set'; target: number });
+} & (
+  | { kind: 'delta'; delta: number }
+  | { kind: 'set'; target: number }
+  /** Auto-deduct: the days since `lastAutoDeductAt`, worked out inside the transaction. */
+  | { kind: 'auto'; now: Date }
+);
 
 export type StockWriteResult = {
   change: StockChange;
@@ -48,17 +53,29 @@ export function runStockTransaction(write: StockWrite): Promise<StockWriteResult
       throw new ProductNotFoundError(productId);
     }
     const product = snapshot.data();
+
+    // Auto-deduct reads its plan here, against the product as read in the
+    // transaction, and moves `lastAutoDeductAt` in the same commit: a second
+    // phone or a second foreground sees the new mark and deducts nothing.
+    const plan = write.kind === 'auto' ? autoDeductPlan(product, write.now) : null;
     const change =
       write.kind === 'delta'
         ? computeStockChange({ onHand: product.onHand, delta: write.delta })
-        : computeAdjustment({ onHand: product.onHand, target: write.target });
+        : write.kind === 'set'
+          ? computeAdjustment({ onHand: product.onHand, target: write.target })
+          : computeStockChange({ onHand: product.onHand, delta: plan?.delta ?? 0 });
+    const mark = plan ? { lastAutoDeductAt: plan.nextAt } : {};
+    const note = plan ? `${String(plan.days)} ${plan.days === 1 ? 'day' : 'days'}` : write.note;
 
     if (change.type === null) {
+      if (plan) {
+        tx.update(ref, mark);
+      }
       return { change, product, eventId: null };
     }
 
     const eventRef = doc(eventsPath(householdId));
-    tx.update(ref, { onHand: change.after, updatedAt: serverTimestamp() });
+    tx.update(ref, { onHand: change.after, ...mark, updatedAt: serverTimestamp() });
     tx.set(eventRef, {
       productId,
       petId: write.petId,
@@ -66,7 +83,7 @@ export function runStockTransaction(write: StockWrite): Promise<StockWriteResult
       method: write.method,
       delta: change.applied,
       onHandAfter: change.after,
-      note: write.note,
+      note,
       createdAt: serverTimestamp(),
       createdBy: write.uid,
     });

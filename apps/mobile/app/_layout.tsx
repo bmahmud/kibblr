@@ -7,11 +7,15 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { ToastProvider } from '@/components/toast';
 import { AuthProvider, useAuth } from '@/features/auth/auth-provider';
+import { configureNotifications } from '@/features/notifications/low-stock';
 import { useTheme, useThemePreferences } from '@/theme';
 
 // Keep the splash up until the persisted session has been restored, so a
 // signed-in user never sees the sign-in screen flash on launch.
 void SplashScreen.preventAutoHideAsync();
+
+// Low-stock reminders also show while the app is open.
+configureNotifications();
 
 export default function RootLayout() {
   const { scheme, colors } = useTheme();

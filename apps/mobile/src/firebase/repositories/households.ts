@@ -1,6 +1,6 @@
 import { householdSchema, newHousehold, userDocSchema } from '@kibblr/core';
-import type { Household, WithId } from '@kibblr/core';
-import { collection, doc, onSnapshot, runTransaction, serverTimestamp } from 'firebase/firestore';
+import type { Household, HouseholdSettings, WithId } from '@kibblr/core';
+import { collection, doc, onSnapshot, runTransaction, serverTimestamp, updateDoc } from 'firebase/firestore';
 import type { Unsubscribe } from 'firebase/firestore';
 
 import { zodConverter } from '../converters';
@@ -51,4 +51,13 @@ export function watchHousehold(
     },
     onError,
   );
+}
+
+/** Changes some household settings, leaving the others as they are. */
+export async function updateHouseholdSettings(householdId: string, patch: Partial<HouseholdSettings>): Promise<void> {
+  const fields: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(patch)) {
+    fields[`settings.${key}`] = value;
+  }
+  await updateDoc(doc(db, 'households', householdId), fields);
 }

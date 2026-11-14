@@ -1,4 +1,14 @@
-import { CONTAINER_LABELS, formatCount, formatSize, parseNumber, roundCount, stockStatus } from '@kibblr/core';
+import {
+  CONTAINER_LABELS,
+  formatCount,
+  formatRunway,
+  formatSize,
+  parseNumber,
+  roundCount,
+  runwayDays,
+  stockStatus,
+  usageFormValues,
+} from '@kibblr/core';
 import type { Product, WithId } from '@kibblr/core';
 import { Link, Stack, router, useLocalSearchParams } from 'expo-router';
 import * as Clipboard from 'expo-clipboard';
@@ -27,8 +37,9 @@ import { CATEGORY_DISPLAY } from '@/features/inventory/category';
 import { useSignedIn } from '@/features/auth/auth-provider';
 import { inventoryErrorMessage } from '@/features/inventory/errors';
 import { EventRow } from '@/features/inventory/event-row';
-import { useEvents, useHouseholdSettings, useProduct } from '@/features/inventory/hooks';
+import { useEvents, useHouseholdSettings, useLearnedRates, useProduct } from '@/features/inventory/hooks';
 import { scheduleProductDelete } from '@/features/inventory/pending-delete';
+import { UsageSection } from '@/features/inventory/usage-section';
 import { useStockActions } from '@/features/inventory/use-stock-actions';
 import { PRODUCT_PHOTO_SIZE, askPhotoAction, pickPhoto } from '@/features/photos/pick-photo';
 import { FeedbackSection } from '@/features/ratings/feedback-section';
@@ -71,6 +82,9 @@ function ProductDetail({ product }: { product: WithId<Product> }) {
   const actions = useStockActions();
   const toast = useToast();
   const events = useEvents({ productId: product.id, max: 20 });
+  const learned = useLearnedRates().get(product.id) ?? null;
+  const runway = runwayDays(product, learned);
+  const usage = usageFormValues(product);
 
   const [amount, setAmount] = useState('');
   const [amountError, setAmountError] = useState<string | undefined>(undefined);
@@ -282,7 +296,10 @@ function ProductDetail({ product }: { product: WithId<Product> }) {
               {roundCount(product.onHand) === 1 ? label.one : label.many}
             </Text>
           </View>
-          <StatusBadge status={stockStatus(product, settings)} />
+          <StatusBadge status={stockStatus(product, settings, learned)} />
+          {runway !== null && product.onHand > 0 ? (
+            <Text style={[typography.caption, { color: colors.textMuted }]}>{formatRunway(runway)} left</Text>
+          ) : null}
           {product.size ? (
             <Text style={[typography.caption, { color: colors.textMuted }]}>
               {formatSize(product.size, unit)} per {label.one}
@@ -326,6 +343,8 @@ function ProductDetail({ product }: { product: WithId<Product> }) {
             </View>
           </View>
         </View>
+
+        <UsageSection key={JSON.stringify(usage)} product={product} initial={usage} learned={learned} />
 
         <FeedbackSection product={product} />
 

@@ -1,4 +1,4 @@
-import { CONTAINER_LABELS, formatCount, formatSize, roundCount } from '@kibblr/core';
+import { CONTAINER_LABELS, formatCount, formatRunway, formatSize, roundCount } from '@kibblr/core';
 import type { Product, StockStatus, WeightUnit, WithId } from '@kibblr/core';
 import { router } from 'expo-router';
 import type { ComponentProps } from 'react';
@@ -17,6 +17,8 @@ import { CATEGORY_DISPLAY } from './category';
 type Props = {
   product: WithId<Product>;
   status: StockStatus;
+  /** Days left, when the usage rate is known (spec section 6.2). */
+  runway: number | null;
   /** Only for the size line. */
   unit: WeightUnit;
   /** The pets that eat it, for the avatars. */
@@ -36,12 +38,13 @@ const ACTION_WIDTH = 88;
  * The card is a plain Pressable, not `<Link asChild>`: Link's slot drops a
  * style function, which loses the card's background and layout.
  */
-export function InventoryRow({ product, status, unit, pets, onAdd, onUse }: Props) {
+export function InventoryRow({ product, status, runway, unit, pets, onAdd, onUse }: Props) {
   const { colors, radius, spacing, typography, touchTarget } = useTheme();
   const label = CONTAINER_LABELS[product.container];
   const count = roundCount(product.onHand);
   const onHand = formatCount(product.onHand, product.container);
   const category = CATEGORY_DISPLAY[product.category];
+  const left = runway === null || status === 'out' ? null : formatRunway(runway);
   const subtitle = [product.brand, product.size ? `${formatSize(product.size, unit)} ${label.one}` : null]
     .filter(Boolean)
     .join(' · ');
@@ -87,7 +90,7 @@ export function InventoryRow({ product, status, unit, pets, onAdd, onUse }: Prop
         renderRightActions={(_progress, _translation, methods) => action('use', methods)}>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={`${product.name}${subtitle ? `, ${subtitle}` : ''}, ${onHand} on hand, ${status}`}
+          accessibilityLabel={`${product.name}${subtitle ? `, ${subtitle}` : ''}, ${onHand} on hand${left ? `, ${left} left` : ''}, ${status}`}
           accessibilityHint="Opens the product. Swipe for quick add or use."
           accessibilityActions={[
             { name: 'increment', label: `Add 1 ${label.one}` },
@@ -149,6 +152,11 @@ export function InventoryRow({ product, status, unit, pets, onAdd, onUse }: Prop
             <Text style={[typography.caption, { color: colors.textMuted }]}>
               {count === 1 ? label.one : label.many}
             </Text>
+            {left ? (
+              <Text style={[typography.caption, { color: status === 'ok' ? colors.textMuted : colors.statusLow }]}>
+                {left}
+              </Text>
+            ) : null}
           </View>
         </Pressable>
       </Swipeable>

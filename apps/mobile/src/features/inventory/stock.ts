@@ -19,8 +19,10 @@ export type StockChangeResult = StockWriteResult & {
   after: number;
 };
 
+// Low-stock reminders are rescheduled by `useLowStockScheduler`
+// (features/notifications), which reacts to the product snapshot each commit
+// produces, so edits and other phones' changes reschedule too (spec 5.3 step 4).
 function withSummary(result: StockWriteResult): StockChangeResult {
-  // Phase 6: call rescheduleLowStockNotification(product) here, after commit (spec section 5.3 step 4).
   return { ...result, before: result.change.before, after: result.change.after };
 }
 
@@ -55,6 +57,24 @@ export async function setOnHand(
     method: 'manual',
     petId: null,
     note: input.note ?? null,
+  });
+  return withSummary(result);
+}
+
+/**
+ * Auto-deduct (spec section 8): removes `dailyUsage` for each whole day since
+ * `lastAutoDeductAt`, as one `auto` event, and moves the mark, in one
+ * transaction. Does nothing when no day has passed.
+ */
+export async function applyAutoDeduct(ctx: StockContext, productId: string, now: Date): Promise<StockChangeResult> {
+  const result = await runStockTransaction({
+    ...ctx,
+    kind: 'auto',
+    productId,
+    now,
+    method: 'auto',
+    petId: null,
+    note: null,
   });
   return withSummary(result);
 }

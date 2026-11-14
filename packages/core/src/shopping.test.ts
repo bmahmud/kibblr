@@ -81,3 +81,21 @@ describe('shoppingListText', () => {
     );
   });
 });
+
+describe('shoppingList with learned rates', () => {
+  it('uses them for status and runway order', () => {
+    const rates = new Map([
+      ['slow', 0.5],
+      ['fast', 1],
+    ]);
+    const list = shoppingList(
+      [product({ id: 'slow', onHand: 3 }), product({ id: 'fast', onHand: 3 }), product({ id: 'fine', onHand: 3 })],
+      settings,
+      (p) => rates.get(p.id) ?? null,
+    );
+    expect(list.toBuy.map((i) => [i.product.id, i.runway])).toEqual([
+      ['fast', 3],
+      ['slow', 6],
+    ]);
+  });
+});

@@ -55,3 +55,33 @@ export async function hasEarlierUse(householdId: string, productId: string, even
   );
   return snapshot.docs.some((document) => document.id !== eventId);
 }
+
+/**
+ * Live household events since `since`, for learning usage rates (spec section
+ * 8). One range filter on `createdAt`: the automatic single-field index.
+ */
+export function watchRecentEvents(
+  householdId: string,
+  since: Date,
+  onNext: (events: WithId<StockEvent>[]) => void,
+  onError: (error: Error) => void,
+): Unsubscribe {
+  const q = query(eventsPath(householdId), where('createdAt', '>=', since), orderBy('createdAt', 'desc')).withConverter(
+    eventConverter,
+  );
+  return onSnapshot(
+    q,
+    (snapshot) => {
+      const events: WithId<StockEvent>[] = [];
+      for (const document of snapshot.docs) {
+        try {
+          events.push(document.data());
+        } catch (error) {
+          console.warn(`Skipping event ${document.id}: it does not match the schema.`, error);
+        }
+      }
+      onNext(events);
+    },
+    onError,
+  );
+}

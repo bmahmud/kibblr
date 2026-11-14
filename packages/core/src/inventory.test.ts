@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { DEFAULT_HOUSEHOLD_SETTINGS } from './household';
-import { groupInventory, runwayDays, stockStatus } from './inventory';
+import { formatRunway, groupInventory, runwayDays, stockStatus } from './inventory';
 import type { InventoryProduct } from './inventory';
 
 const settings = DEFAULT_HOUSEHOLD_SETTINGS; // 7 low-stock days
@@ -114,5 +114,39 @@ describe('groupInventory', () => {
 
   it('returns empty groups for no products', () => {
     expect(groupInventory([], settings)).toEqual({ lowOrOut: [], ok: [] });
+  });
+});
+
+describe('learned rates', () => {
+  it('give a runway when no daily usage is set', () => {
+    expect(runwayDays(product({ onHand: 9 }), 0.5)).toBe(18);
+    expect(runwayDays(product({ onHand: 9, dailyUsage: 1 }), 0.5)).toBe(9);
+    expect(runwayDays(product({ onHand: 9 }), null)).toBeNull();
+  });
+
+  it('decide days-mode status instead of the last-package rule', () => {
+    expect(stockStatus(product({ onHand: 3 }), settings, 1)).toBe('low');
+    expect(stockStatus(product({ onHand: 1 }), settings, 0.1)).toBe('ok');
+  });
+
+  it('are looked up per product when grouping', () => {
+    const rates = new Map([['a', 1]]);
+    const { lowOrOut, ok } = groupInventory(
+      [product({ id: 'a', name: 'A', onHand: 3 }), product({ id: 'b', name: 'B', onHand: 3 })],
+      settings,
+      {},
+      (p) => rates.get(p.id) ?? null,
+    );
+    expect(lowOrOut.map((i) => i.product.id)).toEqual(['a']);
+    expect(ok.map((i) => i.product.id)).toEqual(['b']);
+  });
+});
+
+describe('formatRunway', () => {
+  it('rounds down to whole days', () => {
+    expect(formatRunway(9.8)).toBe('~9 days');
+    expect(formatRunway(1.5)).toBe('~1 day');
+    expect(formatRunway(0.4)).toBe('<1 day');
+    expect(formatRunway(0)).toBe('<1 day');
   });
 });
