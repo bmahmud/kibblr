@@ -1,6 +1,6 @@
 import { CONTAINER_LABELS, formatCount } from './count';
 import { runwayDays, stockStatus } from './inventory';
-import type { InventoryProduct } from './inventory';
+import type { InventoryProduct, LearnedRateOf } from './inventory';
 import type { HouseholdSettings, Product } from './schemas';
 import { formatSize } from './units';
 
@@ -29,15 +29,17 @@ function byUrgency<T extends ShoppingProduct>(a: ShoppingItem<T>, b: ShoppingIte
 export function shoppingList<T extends ShoppingProduct>(
   products: readonly T[],
   settings: Pick<HouseholdSettings, 'defaultLowStockDays'>,
+  learned?: LearnedRateOf<T>,
 ): { toBuy: ShoppingItem<T>[]; notReordering: ShoppingItem<T>[] } {
   const items: ShoppingItem<T>[] = [];
   for (const product of products) {
     if (product.archived) {
       continue;
     }
-    const status = stockStatus(product, settings);
+    const rate = learned?.(product) ?? null;
+    const status = stockStatus(product, settings, rate);
     if (status !== 'ok') {
-      items.push({ product, status, runway: runwayDays(product) });
+      items.push({ product, status, runway: runwayDays(product, rate) });
     }
   }
   items.sort(byUrgency);

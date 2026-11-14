@@ -28,8 +28,39 @@ export type { AuthMode, CredentialErrors, CredentialInput } from './auth';
 export { computeAdjustment, computeStockChange, undoDelta } from './stock';
 export type { StockChange } from './stock';
 
-export { groupInventory, runwayDays, stockStatus } from './inventory';
-export type { InventoryFilter, InventoryItem, InventoryProduct, StockStatus } from './inventory';
+export { formatRunway, groupInventory, runwayDays, stockStatus } from './inventory';
+export type { InventoryFilter, InventoryItem, InventoryProduct, LearnedRateOf, StockStatus } from './inventory';
+
+export {
+  ALERT_LIMIT,
+  LEARN_MIN_DAYS,
+  LEARN_WINDOW_DAYS,
+  autoDeductBaseline,
+  autoDeductPlan,
+  calendarDaysBetween,
+  effectiveRate,
+  learnedRate,
+  learnedRates,
+  lowStockAlertAt,
+  lowStockMessage,
+  nextNotifyTime,
+  planLowStockAlerts,
+  startOfLocalDay,
+  usageFormValues,
+  usagePatch,
+  validateUsageForm,
+} from './prediction';
+export type {
+  AlertProduct,
+  AutoDeductPlan,
+  FiredAlerts,
+  LowStockAlert,
+  LowStockMode,
+  RateEvent,
+  UsageFields,
+  UsageFormInput,
+  UsageFormResult,
+} from './prediction';
 
 export { newProductDraft, productFormValues, validateProductForm } from './product-form';
 export type { ProductDraft, ProductFields, ProductFormErrors, ProductFormInput, ProductFormResult } from './product-form';
