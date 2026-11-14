@@ -1,9 +1,21 @@
 import { CONTAINER_LABELS, formatCount, formatSize, parseNumber, roundCount, stockStatus } from '@kibblr/core';
 import type { Product, WithId } from '@kibblr/core';
 import { Link, Stack, router, useLocalSearchParams } from 'expo-router';
+import * as Clipboard from 'expo-clipboard';
 import { useState } from 'react';
-import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  Text,
+  View,
+  useWindowDimensions,
+} from 'react-native';
 
+import { Barcode } from '@/components/barcode';
 import { Button } from '@/components/button';
 import { EmptyState } from '@/components/empty-state';
 import { NavLink } from '@/components/nav-link';
@@ -16,9 +28,11 @@ import { useSignedIn } from '@/features/auth/auth-provider';
 import { inventoryErrorMessage } from '@/features/inventory/errors';
 import { EventRow } from '@/features/inventory/event-row';
 import { useEvents, useHouseholdSettings, useProduct } from '@/features/inventory/hooks';
+import { scheduleProductDelete } from '@/features/inventory/pending-delete';
 import { useStockActions } from '@/features/inventory/use-stock-actions';
+import { PRODUCT_PHOTO_SIZE, askPhotoAction, pickPhoto } from '@/features/photos/pick-photo';
 import { FeedbackSection } from '@/features/ratings/feedback-section';
-import { setProductArchived } from '@/firebase/repositories/products';
+import { setProductArchived, updateProduct } from '@/firebase/repositories/products';
 import { useTheme } from '@/theme';
 
 export default function ProductDetailScreen() {
@@ -61,6 +75,8 @@ function ProductDetail({ product }: { product: WithId<Product> }) {
   const [amount, setAmount] = useState('');
   const [amountError, setAmountError] = useState<string | undefined>(undefined);
   const [busy, setBusy] = useState(false);
+  const [loadingPhoto, setLoadingPhoto] = useState(false);
+  const { width } = useWindowDimensions();
   const label = CONTAINER_LABELS[product.container];
 
   async function step(delta: number) {
@@ -115,6 +131,52 @@ function ProductDetail({ product }: { product: WithId<Product> }) {
     router.back();
   }
 
+  async function changePhoto() {
+    const action = await askPhotoAction(product.name, product.photo !== null);
+    if (action === null) {
+      return;
+    }
+    try {
+      if (action === 'remove') {
+        await updateProduct(householdId, product.id, { photo: null });
+        return;
+      }
+      setLoadingPhoto(true);
+      const result = await pickPhoto(action, PRODUCT_PHOTO_SIZE);
+      if (result.status === 'picked') {
+        await updateProduct(householdId, product.id, { photo: result.photo });
+      } else if (result.status === 'denied') {
+        toast.show({ message: 'Allow camera access in Settings to take a photo.', tone: 'error' });
+      } else if (result.status === 'tooLarge') {
+        toast.show({ message: 'That photo is too large. Try another.', tone: 'error' });
+      }
+    } catch (error) {
+      toast.show({ message: inventoryErrorMessage(error), tone: 'error' });
+    } finally {
+      setLoadingPhoto(false);
+    }
+  }
+
+  function confirmDelete() {
+    Alert.alert(`Delete ${product.name}?`, 'This removes it and its ratings. Its history entries are hidden.', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete', style: 'destructive', onPress: remove },
+    ]);
+  }
+
+  function remove() {
+    const pending = scheduleProductDelete(householdId, product.id, (error) =>
+      toast.show({ message: inventoryErrorMessage(error), tone: 'error' }),
+    );
+    toast.show({ message: `Deleted ${product.name}.`, action: { label: 'Undo', onPress: pending.undo } });
+    router.back();
+  }
+
+  async function copyBarcode(gtin: string) {
+    await Clipboard.setStringAsync(gtin);
+    toast.show({ message: `Copied ${gtin}.` });
+  }
+
   const section = {
     gap: spacing.md,
     padding: spacing.lg,
@@ -167,9 +229,39 @@ function ProductDetail({ product }: { product: WithId<Product> }) {
             },
           ]}>
           {product.archived ? <Text style={[typography.caption, { color: colors.statusLow }]}>Archived</Text> : null}
-          {product.imageUrl ? (
-            <ProductImage imageUrl={product.imageUrl} icon={CATEGORY_DISPLAY[product.category].icon} size={96} />
-          ) : null}
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={product.photo ? 'Change photo' : 'Add your own photo'}
+            disabled={loadingPhoto}
+            onPress={() => void changePhoto()}
+            style={({ pressed }) => ({ opacity: pressed ? 0.8 : 1, marginBottom: spacing.sm })}>
+            <ProductImage
+              imageUrl={product.imageUrl}
+              photo={product.photo}
+              icon={CATEGORY_DISPLAY[product.category].icon}
+              size={128}
+            />
+            <View
+              style={{
+                position: 'absolute',
+                right: -spacing.sm,
+                bottom: -spacing.sm,
+                width: 40,
+                height: 40,
+                borderRadius: radius.pill,
+                borderWidth: 3,
+                borderColor: colors.surface,
+                backgroundColor: colors.primary,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}>
+              {loadingPhoto ? (
+                <ActivityIndicator size="small" color={colors.onPrimary} />
+              ) : (
+                <Text style={typography.body}>📷</Text>
+              )}
+            </View>
+          </Pressable>
           <Text style={[typography.body, { color: colors.textMuted }]}>
             {[CATEGORY_DISPLAY[product.category].icon, product.brand || CATEGORY_DISPLAY[product.category].label].join(
               ' ',
@@ -237,6 +329,22 @@ function ProductDetail({ product }: { product: WithId<Product> }) {
 
         <FeedbackSection product={product} />
 
+        {product.barcode ? (
+          <View style={[section, { paddingHorizontal: 0, paddingBottom: 0, overflow: 'hidden' }]}>
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                paddingHorizontal: spacing.lg,
+              }}>
+              <Text style={[typography.bodyStrong, { color: colors.text }]}>Barcode</Text>
+              <Button label="Copy" variant="link" onPress={() => void copyBarcode(product.barcode ?? '')} />
+            </View>
+            <Barcode gtin={product.barcode} width={width - spacing.lg * 2} />
+          </View>
+        ) : null}
+
         <View style={section}>
           <Text style={[typography.bodyStrong, { color: colors.text }]}>Recent activity</Text>
           {events.status === 'loading' ? <ActivityIndicator color={colors.primary} /> : null}
@@ -252,7 +360,10 @@ function ProductDetail({ product }: { product: WithId<Product> }) {
           <NavLink href={{ pathname: '/history', params: { productId: product.id } }} label="Full history" />
         </View>
 
-        {product.archived ? null : <Button label="Archive product" variant="link" onPress={() => void archive()} />}
+        <View style={{ flexDirection: 'row', justifyContent: 'center', gap: spacing.xl }}>
+          {product.archived ? null : <Button label="Archive" variant="link" onPress={() => void archive()} />}
+          <Button label="Delete" variant="link" tone="danger" onPress={confirmDelete} />
+        </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );

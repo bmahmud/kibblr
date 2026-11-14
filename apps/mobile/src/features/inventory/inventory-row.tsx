@@ -115,7 +115,7 @@ export function InventoryRow({ product, status, unit, pets, onAdd, onUse }: Prop
             paddingVertical: spacing.md,
             backgroundColor: pressed ? colors.surfaceRaised : colors.surface,
           })}>
-          <ProductImage imageUrl={product.imageUrl} icon={category.icon} size={44} />
+          <ProductImage imageUrl={product.imageUrl} photo={product.photo} icon={category.icon} size={44} />
 
           <View style={{ flex: 1, gap: 2 }}>
             <Text style={[typography.bodyStrong, { color: colors.text }]} numberOfLines={2}>

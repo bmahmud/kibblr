@@ -133,6 +133,7 @@ export function newProductDraft(
     verdict: 'undecided',
     verdictNote: null,
     imageUrl: lookup?.imageUrl ?? null,
+    photo: null,
     source: lookup ? 'lookup' : 'manual',
     archived: false,
   };

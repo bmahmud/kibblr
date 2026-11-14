@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { activePets, newPetDraft, petFoods, petInitials, validatePetForm } from './pets';
-import { PET_PHOTO_MAX, petSchema } from './schemas';
+import { PHOTO_MAX, petSchema } from './schemas';
 
 describe('validatePetForm', () => {
   it('trims the name and keeps the species', () => {
@@ -49,7 +49,7 @@ describe('petSchema photo', () => {
   it('accepts a small JPEG data URI only', () => {
     expect(petSchema.safeParse({ ...pet, photo: 'data:image/jpeg;base64,AAAA' }).success).toBe(true);
     expect(petSchema.safeParse({ ...pet, photo: 'https://example.com/miso.jpg' }).success).toBe(false);
-    const huge = 'data:image/jpeg;base64,' + 'A'.repeat(PET_PHOTO_MAX);
+    const huge = 'data:image/jpeg;base64,' + 'A'.repeat(PHOTO_MAX);
     expect(petSchema.safeParse({ ...pet, photo: huge }).success).toBe(false);
   });
 });

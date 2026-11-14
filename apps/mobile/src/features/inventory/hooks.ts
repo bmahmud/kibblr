@@ -7,15 +7,23 @@ import { useSignedIn } from '@/features/auth/auth-provider';
 import { useHousehold } from '@/features/auth/use-household';
 import { useSubscription } from '@/lib/use-subscription';
 
+import { usePendingDeletes } from './pending-delete';
+
 /** Live products: non-archived, or all of them for History. */
 export function useProducts(options: { includeArchived?: boolean } = {}) {
   const { householdId } = useSignedIn();
   const includeArchived = options.includeArchived ?? false;
-  return useSubscription<WithId<Product>[]>(
+  const products = useSubscription<WithId<Product>[]>(
     `products:${householdId}:${includeArchived ? 'all' : 'active'}`,
     (onNext, onError) => watchProducts(householdId, { includeArchived }, onNext, onError),
     "Couldn't load your products.",
   );
+  // Products waiting out their Undo toast are already gone as far as I can see.
+  const pending = usePendingDeletes((state) => state.ids);
+  if (products.status !== 'ready' || pending.length === 0) {
+    return products;
+  }
+  return { ...products, data: products.data.filter((product) => !pending.includes(product.id)) };
 }
 
 /** The household's settings for stock status; defaults until it has loaded. */

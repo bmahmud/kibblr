@@ -2,11 +2,12 @@ import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
+import { Appearance } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { ToastProvider } from '@/components/toast';
 import { AuthProvider, useAuth } from '@/features/auth/auth-provider';
-import { useTheme } from '@/theme';
+import { useTheme, useThemePreferences } from '@/theme';
 
 // Keep the splash up until the persisted session has been restored, so a
 // signed-in user never sees the sign-in screen flash on launch.
@@ -14,6 +15,14 @@ void SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   const { scheme, colors } = useTheme();
+  const appearance = useThemePreferences((state) => state.appearance);
+
+  // Light or Dark from Settings overrides the phone's setting for the whole
+  // app, native tab bar, alerts and pickers included; System follows the phone.
+  useEffect(() => {
+    Appearance.setColorScheme(appearance === 'system' ? 'auto' : appearance);
+  }, [appearance]);
+
   const base = scheme === 'dark' ? DarkTheme : DefaultTheme;
   const navTheme = {
     ...base,

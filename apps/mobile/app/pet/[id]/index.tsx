@@ -216,7 +216,7 @@ function FoodRow({ product, petId, first }: { product: WithId<Product>; petId: s
         paddingLeft: spacing.lg,
         backgroundColor: pressed ? colors.surfaceRaised : colors.surface,
       })}>
-      <ProductImage imageUrl={product.imageUrl} icon={CATEGORY_DISPLAY[product.category].icon} size={44} />
+      <ProductImage imageUrl={product.imageUrl} photo={product.photo} icon={CATEGORY_DISPLAY[product.category].icon} size={44} />
       <View
         style={{
           flex: 1,

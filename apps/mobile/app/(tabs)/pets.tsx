@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/button';
 import { EmptyState } from '@/components/empty-state';
+import { TabHeader } from '@/components/tab-header';
 import { useProducts } from '@/features/inventory/hooks';
 import { usePets } from '@/features/pets/hooks';
 import { PetPhoto } from '@/features/pets/pet-photo';
@@ -87,10 +88,7 @@ export default function PetsScreen() {
         gap: spacing.sm,
         paddingBottom: spacing.xxl * 3,
       }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingBottom: spacing.sm }}>
-        <Text accessibilityRole="header" style={[typography.display, { color: colors.text, flex: 1 }]}>
-          Pets
-        </Text>
+      <TabHeader title="Pets">
         {active.length > 0 ? (
           <Pressable
             accessibilityRole="button"
@@ -107,7 +105,7 @@ export default function PetsScreen() {
             <Text style={[typography.bodyStrong, { color: colors.onPrimary }]}>+ Add</Text>
           </Pressable>
         ) : null}
-      </View>
+      </TabHeader>
 
       {pets.status === 'loading' ? (
         <ActivityIndicator style={{ marginTop: spacing.xxl }} color={colors.primary} />

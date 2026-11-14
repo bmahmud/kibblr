@@ -62,3 +62,71 @@ export function normalizeGtin(raw: string, hint?: BarcodeHint): string | null {
   }
   return code.padStart(13, '0');
 }
+
+// EAN-13 symbol tables: each digit is 7 modules (1 = bar).
+const L_CODES = [
+  '0001101',
+  '0011001',
+  '0010011',
+  '0111101',
+  '0100011',
+  '0110001',
+  '0101111',
+  '0111011',
+  '0110111',
+  '0001011',
+];
+const G_CODES = [
+  '0100111',
+  '0110011',
+  '0011011',
+  '0100001',
+  '0011101',
+  '0111001',
+  '0000101',
+  '0010001',
+  '0001001',
+  '0010111',
+];
+const R_CODES = [
+  '1110010',
+  '1100110',
+  '1101100',
+  '1000010',
+  '1011100',
+  '1001110',
+  '1010000',
+  '1000100',
+  '1001000',
+  '1110100',
+];
+/** The first digit isn't drawn; it picks L or G for each digit of the left half. */
+const PARITY = ['LLLLLL', 'LLGLGG', 'LLGGLG', 'LLGGGL', 'LGLLGG', 'LGGLLG', 'LGGGLL', 'LGLGLG', 'LGLGGL', 'LGGLGL'];
+
+/**
+ * The 95 modules of an EAN-13 symbol, left to right (true = bar), for drawing
+ * a product's barcode. Null unless `gtin` is a valid GTIN-13.
+ */
+export function ean13Modules(gtin: string): boolean[] | null {
+  if (!/^\d{13}$/.test(gtin) || !isValidGtin(gtin)) {
+    return null;
+  }
+  const digits = [...gtin].map(Number);
+  const parity = PARITY[digits[0] ?? 0] ?? PARITY[0];
+  let bits = '101';
+  for (let i = 1; i <= 6; i++) {
+    const table = parity?.[i - 1] === 'G' ? G_CODES : L_CODES;
+    bits += table[digits[i] ?? 0];
+  }
+  bits += '01010';
+  for (let i = 7; i <= 12; i++) {
+    bits += R_CODES[digits[i] ?? 0];
+  }
+  bits += '101';
+  return [...bits].map((bit) => bit === '1');
+}
+
+/** A GTIN-13 grouped as it is printed under the bars: "4 006381 333931". */
+export function formatGtin13(gtin: string): string {
+  return `${gtin.slice(0, 1)} ${gtin.slice(1, 7)} ${gtin.slice(7)}`;
+}

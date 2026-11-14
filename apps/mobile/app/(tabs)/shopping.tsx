@@ -11,6 +11,7 @@ import { ProductImage } from '@/components/product-image';
 import { StatusBadge } from '@/components/status-badge';
 import { useToast } from '@/components/toast';
 import { VerdictBadge } from '@/components/verdict-badge';
+import { TabHeader } from '@/components/tab-header';
 import { CATEGORY_DISPLAY } from '@/features/inventory/category';
 import { useHouseholdSettings, useProducts } from '@/features/inventory/hooks';
 import { useTheme } from '@/theme';
@@ -79,7 +80,7 @@ export default function ShoppingScreen() {
             padding: spacing.lg,
             backgroundColor: pressed ? colors.surfaceRaised : colors.surface,
           })}>
-          <ProductImage imageUrl={product.imageUrl} icon={CATEGORY_DISPLAY[product.category].icon} size={44} />
+          <ProductImage imageUrl={product.imageUrl} photo={product.photo} icon={CATEGORY_DISPLAY[product.category].icon} size={44} />
           <View style={{ flex: 1, gap: 2 }}>
             <Text style={[typography.bodyStrong, { color: colors.text }]} numberOfLines={2}>
               {product.name}
@@ -121,10 +122,7 @@ export default function ShoppingScreen() {
         gap: spacing.sm,
         paddingBottom: spacing.xxl * 3,
       }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingBottom: spacing.sm }}>
-        <Text accessibilityRole="header" style={[typography.display, { color: colors.text, flex: 1 }]}>
-          Shopping
-        </Text>
+      <TabHeader title="Shopping">
         {toBuy.length > 0 ? (
           <Pressable
             accessibilityRole="button"
@@ -134,7 +132,7 @@ export default function ShoppingScreen() {
             <Text style={[typography.bodyStrong, { color: colors.primary }]}>Share</Text>
           </Pressable>
         ) : null}
-      </View>
+      </TabHeader>
 
       {products.status === 'loading' ? (
         <ActivityIndicator style={{ marginTop: spacing.xxl }} color={colors.primary} />

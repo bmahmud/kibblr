@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { expandUpcE, isValidGtin, normalizeGtin } from './gtin';
+import { ean13Modules, expandUpcE, formatGtin13, isValidGtin, normalizeGtin } from './gtin';
 
 describe('isValidGtin', () => {
   it('accepts codes with a correct check digit', () => {
@@ -66,5 +66,37 @@ describe('normalizeGtin', () => {
     expect(normalizeGtin('123456789012345')).toBeNull();
     expect(normalizeGtin('')).toBeNull();
     expect(normalizeGtin('abc')).toBeNull();
+  });
+});
+
+describe('ean13Modules', () => {
+  // Wikipedia's EAN-13 example, 4 006381 333931.
+  const modules = ean13Modules('4006381333931') ?? [];
+
+  it('is 95 modules with start, centre and end guards', () => {
+    expect(modules).toHaveLength(95);
+    const bits = modules.map((on) => (on ? '1' : '0')).join('');
+    expect(bits.slice(0, 3)).toBe('101');
+    expect(bits.slice(45, 50)).toBe('01010');
+    expect(bits.slice(92)).toBe('101');
+  });
+
+  it('encodes the left half with the parity of the first digit and the right half with R codes', () => {
+    const bits = modules.map((on) => (on ? '1' : '0')).join('');
+    // First digit 4 is LGLLGG: 0 in L, 0 in G, 6 in L, 3 in L, 8 in G, 1 in G.
+    expect(bits.slice(3, 45)).toBe(['0001101', '0100111', '0101111', '0111101', '0001001', '0110011'].join(''));
+    // 333931 in R codes.
+    expect(bits.slice(50, 92)).toBe(['1000010', '1000010', '1000010', '1110100', '1000010', '1100110'].join(''));
+  });
+
+  it('returns null for anything but a valid GTIN-13', () => {
+    expect(ean13Modules('4006381333932')).toBeNull();
+    expect(ean13Modules('036000291452')).toBeNull();
+  });
+});
+
+describe('formatGtin13', () => {
+  it('groups as printed under the bars', () => {
+    expect(formatGtin13('4006381333931')).toBe('4 006381 333931');
   });
 });

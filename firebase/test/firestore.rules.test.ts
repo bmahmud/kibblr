@@ -201,9 +201,10 @@ describe('subcollections', () => {
   });
 });
 
+const photo = (length: number) => 'data:image/jpeg;base64,' + 'A'.repeat(length - 23);
+
 describe('pets (photo size)', () => {
   const petPath = `households/${HID}/pets/pet-1`;
-  const photo = (length: number) => 'data:image/jpeg;base64,' + 'A'.repeat(length - 23);
 
   it('accepts no photo, a null photo, or one up to 200 000 characters', async () => {
     await seedHousehold();
@@ -216,6 +217,16 @@ describe('pets (photo size)', () => {
     await seedHousehold();
     await assertFails(setDoc(doc(owner(), petPath), { name: 'Miso', photo: photo(200_001) }));
     await assertFails(setDoc(doc(owner(), petPath), { name: 'Miso', photo: 42 }));
+  });
+});
+
+describe('products (photo size)', () => {
+  const productPath = `households/${HID}/products/prod-1`;
+
+  it('accepts a photo up to 200 000 characters and rejects a larger one', async () => {
+    await seedHousehold();
+    await assertSucceeds(setDoc(doc(owner(), productPath), productData({ photo: photo(200_000) })));
+    await assertFails(setDoc(doc(owner(), productPath), productData({ photo: photo(200_001) })));
   });
 });
 

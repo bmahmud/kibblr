@@ -150,6 +150,7 @@ households/{hid}/products/{productId}
   verdictNote: string | null
   reorderUrl: string | null            # where I buy it
   imageUrl: string | null
+  photo: string | null                 # my own photo, 384 px JPEG data URI; shown instead of imageUrl
   source: 'manual' | 'lookup'
   archived: boolean
   createdAt: Timestamp
@@ -256,6 +257,9 @@ Tabs: **Inventory**, **Shopping**, **Pets**, **Settings**. A floating **Scan** b
 
 ### 6.4 Product detail
 - Header: name, brand, image, on-hand count, size, runway.
+- Tapping the image takes or picks my own photo (or removes it). Lookup packshots are shown whole on a white tile, not cropped.
+- **Barcode**: the GTIN-13 drawn as an EAN-13 symbol with its digits, and Copy.
+- **Archive** or **Delete**. Delete asks first, then waits out the 6-second Undo toast before removing the product and its ratings. Its events stay (the ledger is append-only); History skips them.
 - Big **+ / -** buttons (one package) plus a free-entry number of packages (Use, Add, Set on hand). Every path calls `applyStockChange`.
 - New / Edit product: name, brand, type, container (defaults from type: wet and pate → can, dry and treat → bag), optional size, and on create how many are on hand now.
 - **Usage**: daily amount, auto-deduct toggle, which pets eat it.
@@ -285,6 +289,7 @@ CRUD for pets; archive instead of delete. Per-pet view lists products they eat a
 
 ### 6.8 Settings
 Notification toggle and hour, default low-stock days, weight unit, sign out, export data (JSON via share sheet), app version.
+- **Appearance** (System / Light / Dark) and **Color theme** (Kibble, Ocean, Sage, Berry; each tints backgrounds and the accent, in light and dark). Saved per phone, not per household. Built ahead of Phase 7.
 
 ### 6.9 History
 Chronological events with filter by product and pet; each row shows delta, method, and note.
@@ -293,6 +298,7 @@ Chronological events with filter by product and pet; each row shows delta, metho
 - Every destructive or inventory-changing action is undoable via toast for 6 seconds, except archive (reversible from settings).
 - Empty states explain the next step ("Scan your first bag").
 - Dark mode supported through theme tokens. Large touch targets; one-hand use.
+- Every tab starts with the Kibblr mark above its title.
 - Offline: the Firestore JS SDK in React Native uses an in-memory cache only, so writes made offline are queued while the app stays open but are lost if the app is killed. Show a small "Offline" banner when `NetInfo` reports no connection and warn before exiting the scanner with pending writes.
 
 ---

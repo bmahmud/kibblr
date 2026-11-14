@@ -144,6 +144,7 @@ describe('newProductDraft', () => {
       verdictNote: null,
       reorderUrl: null,
       imageUrl: null,
+      photo: null,
       source: 'manual',
       archived: false,
     });

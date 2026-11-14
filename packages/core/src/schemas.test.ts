@@ -38,6 +38,7 @@ const product = {
   verdictNote: null,
   reorderUrl: 'https://example.com/food',
   imageUrl: null,
+  photo: null,
   source: 'manual',
   archived: false,
   createdAt: now,
@@ -100,6 +101,14 @@ describe('petSchema', () => {
 describe('productSchema', () => {
   it('accepts a valid product', () => {
     expect(productSchema.parse(product)).toEqual(product);
+  });
+
+  it('defaults photo to none and accepts only a small JPEG data URI', () => {
+    const older: Partial<typeof product> = { ...product };
+    delete older.photo;
+    expect(productSchema.parse(older).photo).toBeNull();
+    expect(productSchema.safeParse({ ...product, photo: 'data:image/jpeg;base64,AAAA' }).success).toBe(true);
+    expect(productSchema.safeParse({ ...product, photo: 'https://example.com/a.jpg' }).success).toBe(false);
   });
 
   it('defaults ratedBy to none for products saved before it existed', () => {
