@@ -46,6 +46,13 @@ const config: ExpoConfig = {
       },
     ],
     [
+      'expo-notifications',
+      {
+        // Low-stock reminders are scheduled on the phone (spec section 9): no push, so no APNs entitlement.
+        enableRemoteNotifications: false,
+      },
+    ],
+    [
       'expo-splash-screen',
       {
         backgroundColor: '#208AEF',

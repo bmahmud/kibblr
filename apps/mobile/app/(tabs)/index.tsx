@@ -1,4 +1,4 @@
-import { CATEGORIES, activePets, groupInventory } from '@kibblr/core';
+import { CATEGORIES, activePets, groupInventory, runwayDays } from '@kibblr/core';
 import type { Category } from '@kibblr/core';
 import { Link, router } from 'expo-router';
 import { useState } from 'react';
@@ -11,7 +11,7 @@ import { EmptyState } from '@/components/empty-state';
 import { TextField } from '@/components/text-field';
 import { TabHeader } from '@/components/tab-header';
 import { CATEGORY_DISPLAY } from '@/features/inventory/category';
-import { useHouseholdSettings, useProducts } from '@/features/inventory/hooks';
+import { rateOf, useHouseholdSettings, useLearnedRates, useProducts } from '@/features/inventory/hooks';
 import { InventoryRow } from '@/features/inventory/inventory-row';
 import { useStockActions } from '@/features/inventory/use-stock-actions';
 import { usePets } from '@/features/pets/hooks';
@@ -32,6 +32,7 @@ export default function InventoryScreen() {
   const insets = useSafeAreaInsets();
   const products = useProducts();
   const settings = useHouseholdSettings();
+  const learned = rateOf(useLearnedRates());
   const actions = useStockActions();
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState<CategoryFilter>('all');
@@ -46,11 +47,12 @@ export default function InventoryScreen() {
   const petId = filterPets.some((pet) => pet.id === petFilter) ? petFilter : null;
 
   const all = products.status === 'ready' ? products.data : [];
-  const { lowOrOut, ok } = groupInventory(all, settings, {
-    query,
-    category: category === 'all' ? null : category,
-    petId,
-  });
+  const { lowOrOut, ok } = groupInventory(
+    all,
+    settings,
+    { query, category: category === 'all' ? null : category, petId },
+    learned,
+  );
   const sections = [
     { title: `Low / Out · ${lowOrOut.length}`, data: lowOrOut },
     { title: `In stock · ${ok.length}`, data: ok },
@@ -179,6 +181,7 @@ export default function InventoryScreen() {
         <InventoryRow
           product={item.product}
           status={item.status}
+          runway={runwayDays(item.product, learned(item.product))}
           unit={settings.preferredWeightUnit}
           pets={item.product.petIds.flatMap((id) => {
             const pet = petsById.get(id);

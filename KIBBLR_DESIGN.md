@@ -185,7 +185,9 @@ households/{hid}/events/{eventId}      # append-only
 1. `runTransaction`: read product; compute `next = max(0, onHand + delta)`; if clamped, record the real applied delta.
 2. In the same transaction: update `onHand`/`updatedAt` and create the event with `onHandAfter`.
 3. Return `{ before, after, eventId }` so the UI can offer **Undo** (which calls `applyStockChange` with the inverse delta, `method` preserved, note `"undo"`).
-4. After commit, call `rescheduleLowStockNotification(product)`.
+4. After commit, low-stock reminders are rescheduled. The scheduler (`useLowStockScheduler`) replans from the product snapshot each commit produces, so edits, settings changes and other phones' changes reschedule too.
+
+Auto-deduct runs through the same transaction (`kind: 'auto'`): it re-reads the product, works out the days owed, and writes the `auto` event and the new `lastAutoDeductAt` in one commit, so it can never deduct twice.
 
 Removing more than what is on hand clamps to 0 and the UI tells me.
 
@@ -262,7 +264,7 @@ Tabs: **Inventory**, **Shopping**, **Pets**, **Settings**. A floating **Scan** b
 - **Archive** or **Delete**. Delete asks first, then waits out the 6-second Undo toast before removing the product and its ratings. Its events stay (the ledger is append-only); History skips them.
 - Big **+ / -** buttons (one package) plus a free-entry number of packages (Use, Add, Set on hand). Every path calls `applyStockChange`.
 - New / Edit product: name, brand, type, container (defaults from type: wet and pate → can, dry and treat → bag), optional size, and on create how many are on hand now.
-- **Usage**: daily amount, auto-deduct toggle, which pets eat it.
+- **Usage**: daily amount, auto-deduct toggle, which pets eat it (in the product form). Shows the runway (marked "learned" when no daily amount is set) and when this phone will next remind me.
 - **Low-stock rule**: household default or custom (days / amount).
 - **Feedback**: per-pet rating buttons (loved / ok / refused), comment field, **Verdict** control (Reorder / Skip / Undecided) with a note, optional `reorderUrl`.
 - Recent events list (last 20) with link to full History.
@@ -289,6 +291,7 @@ CRUD for pets; archive instead of delete. Per-pet view lists products they eat a
 
 ### 6.8 Settings
 Notification toggle and hour, default low-stock days, weight unit, sign out, export data (JSON via share sheet), app version.
+- **Reminders** (built in Phase 6): the toggle is per phone, like the permission it needs. The hour (`notifyHour`) and default low-stock days are household settings.
 - **Appearance** (System / Light / Dark) and **Color theme** (Kibble, Ocean, Sage, Berry; each tints backgrounds and the accent, in light and dark). Saved per phone, not per household. Built ahead of Phase 7.
 
 ### 6.9 History
@@ -343,8 +346,14 @@ All functions are pure and unit-tested.
   - mode `days`: `runwayDays <= value` (if runway is null, fall back to `onHand <= 1`: the last package is low).
   - mode `amount`: `onHand <= value` (packages).
   - Out is `onHand === 0`.
-- `learnedRate(events)`: from `remove` events with method `scan|manual|feeding` over the last 30 days, `sum(delta) / days_covered`. Needs at least 7 days of data; otherwise `null`. Phase 6.
-- `autoDeduct`: on app foreground, for each product with `autoDeduct && dailyUsage`, compute whole days since `lastAutoDeductAt` and call `applyStockChange` once with `method: 'auto'`, then set `lastAutoDeductAt`. Idempotent per day.
+- `learnedRate(events, now)`: from `remove` events with method `scan|manual|feeding` over the last 30 days, `sum(delta) / days_covered`. Needs at least 7 days of data; otherwise `null`.
+  - `days_covered` runs from the first counted use to now.
+  - Undos of those uses (an `add` with note `"undo"` and the same method) are subtracted, so a mistaken use doesn't count.
+  - `auto` is left out: it is the daily usage I set, not something learned.
+- `autoDeduct`: on app foreground, for each product with `autoDeduct && dailyUsage`, compute whole days since `lastAutoDeductAt` and apply them once with `method: 'auto'` (note "N days"), setting `lastAutoDeductAt` in the same transaction. Idempotent per day.
+  - Days are local calendar days.
+  - The mark moves to the start of today, not to now, so no fraction of a day is lost.
+  - Turning auto-deduct on sets the mark to the start of today, so the first deduction comes tomorrow.
 - Package counts: format with container plurals ("1 can", "12 cans", "1.5 bags"); round to hundredths when stored.
 - Size units (lb, oz, kg, g, cup, fl oz, ml) with parse/format helpers: stored as whole g/ml, displayed with one decimal.
 
@@ -354,8 +363,14 @@ All functions are pure and unit-tested.
 
 - Ask permission after the first successful scan, not at launch.
 - For each product with a known runway: schedule one date-triggered notification at `(predicted runout date) - lowStockDays`, at `settings.notifyHour` local time. Identifier `lowstock:<productId>`. Body names the product and mentions the verdict ("You usually reorder this").
+- The alert day depends on the low-stock rule:
+  - Days rule: the predicted run-out date minus the rule's days.
+  - Amount rule: the date on hand is predicted to reach the amount.
+  - Auto-deducted products are projected from `lastAutoDeductAt`, so the date holds even if the app isn't opened.
 - **Reschedule** (cancel + schedule) after every `applyStockChange`, on product edit, on app foreground, and when settings change.
-- If the date is already past and the product is still low, fire a single notification the next `notifyHour`, then do not repeat until stock changes.
+  - One scheduler plans every product with `planLowStockAlerts` and diffs the plan against the pending notifications.
+  - It only touches the ones that moved or changed text.
+- If the date is already past and the product is still low, fire a single notification the next `notifyHour`, then do not repeat until stock changes. The phone remembers the on-hand count each past-due reminder was for.
 - Products with verdict `skip` get a different message: "Running low on X (marked skip). Pick an alternative."
 - iOS allows at most 64 pending local notifications; schedule only the soonest 50 products.
 - Tapping a notification deep-links to the product (or the Shopping tab).

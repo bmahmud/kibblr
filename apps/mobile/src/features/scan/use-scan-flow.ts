@@ -9,6 +9,7 @@ import type { ToastOptions } from '@/components/toast';
 import { useSignedIn } from '@/features/auth/auth-provider';
 import { inventoryErrorMessage } from '@/features/inventory/errors';
 import { useStockActions } from '@/features/inventory/use-stock-actions';
+import { askForRemindersAfterScan } from '@/features/notifications/hooks';
 import { findProductsByBarcode, setProductArchived } from '@/firebase/repositories/products';
 
 import { useScanSettings } from './scan-store';
@@ -76,6 +77,7 @@ export function useScanFlow() {
     if (outcome === null) {
       return false;
     }
+    askForRemindersAfterScan();
     if (outcome.eventId !== null) {
       const left = `${formatCount(outcome.after, product.container)} on hand now.`;
       setResult((current) => current && { ...current, message: `${current.message} ${left}` });
