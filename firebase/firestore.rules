@@ -26,6 +26,13 @@ service cloud.firestore {
         && data.container is string;
     }
 
+    // Pet photos live on the pet document as small JPEG data URIs. Cap their
+    // size so one bad write can't fill the 1 MiB document (PET_PHOTO_MAX in core).
+    function validPetPhoto(data) {
+      return !('photo' in data) || data.photo == null
+        || (data.photo is string && data.photo.size() <= 200000);
+    }
+
     // Where a user's household lives, so it can be found again after reinstall.
     match /users/{uid} {
       allow read: if signedIn() && request.auth.uid == uid;
@@ -49,7 +56,8 @@ service cloud.firestore {
       allow delete: if false;
 
       match /pets/{id} {
-        allow read, write: if isMember(hid);
+        allow read, delete: if isMember(hid);
+        allow create, update: if isMember(hid) && validPetPhoto(request.resource.data);
       }
 
       match /products/{id} {

@@ -43,6 +43,8 @@ describe('lookupFormInput', () => {
       sizeValue: '3',
       sizeUnit: 'oz',
       startingCount: '1',
+      petIds: [],
+      reorderUrl: '',
     });
     expect(lookupFormInput(fancyFeast, 'kg', '12')).toMatchObject({
       sizeValue: '85',

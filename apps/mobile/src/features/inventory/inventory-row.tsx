@@ -1,12 +1,15 @@
 import { CONTAINER_LABELS, formatCount, formatSize, roundCount } from '@kibblr/core';
 import type { Product, StockStatus, WeightUnit, WithId } from '@kibblr/core';
 import { router } from 'expo-router';
+import type { ComponentProps } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import type { SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable';
 
+import { PetAvatars } from '@/components/pet-avatars';
 import { ProductImage } from '@/components/product-image';
 import { StatusBadge } from '@/components/status-badge';
+import { VerdictBadge } from '@/components/verdict-badge';
 import { useTheme } from '@/theme';
 
 import { CATEGORY_DISPLAY } from './category';
@@ -16,6 +19,8 @@ type Props = {
   status: StockStatus;
   /** Only for the size line. */
   unit: WeightUnit;
+  /** The pets that eat it, for the avatars. */
+  pets: ComponentProps<typeof PetAvatars>['pets'];
   /** One package either way (the swipe step). */
   onAdd: () => void;
   onUse: () => void;
@@ -31,7 +36,7 @@ const ACTION_WIDTH = 88;
  * The card is a plain Pressable, not `<Link asChild>`: Link's slot drops a
  * style function, which loses the card's background and layout.
  */
-export function InventoryRow({ product, status, unit, onAdd, onUse }: Props) {
+export function InventoryRow({ product, status, unit, pets, onAdd, onUse }: Props) {
   const { colors, radius, spacing, typography, touchTarget } = useTheme();
   const label = CONTAINER_LABELS[product.container];
   const count = roundCount(product.onHand);
@@ -121,9 +126,11 @@ export function InventoryRow({ product, status, unit, onAdd, onUse }: Props) {
                 {subtitle}
               </Text>
             ) : null}
-            {status === 'ok' ? null : (
-              <View style={{ flexDirection: 'row', marginTop: spacing.xs }}>
-                <StatusBadge status={status} />
+            {status === 'ok' && product.verdict === 'undecided' && pets.length === 0 ? null : (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.xs }}>
+                {status === 'ok' ? null : <StatusBadge status={status} />}
+                <VerdictBadge verdict={product.verdict} />
+                <PetAvatars pets={pets} />
               </View>
             )}
           </View>

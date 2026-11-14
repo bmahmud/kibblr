@@ -13,6 +13,8 @@ const valid: ProductFormInput = {
   sizeValue: '3',
   sizeUnit: 'oz',
   startingCount: '12',
+  petIds: ['pet-1'],
+  reorderUrl: '',
 };
 
 describe('validateProductForm', () => {
@@ -25,6 +27,8 @@ describe('validateProductForm', () => {
         category: 'pate',
         container: 'can',
         size: { amount: 85, unit: 'g' },
+        petIds: ['pet-1'],
+        reorderUrl: null,
       },
       startingCount: 12,
     });
@@ -99,6 +103,26 @@ describe('validateProductForm', () => {
     expect(result.ok).toBe(false);
     expect(!result.ok && Object.keys(result.errors).sort()).toEqual(['name', 'size', 'startingCount']);
   });
+
+  it('keeps a store link, adding https:// when it was left off', () => {
+    const link = (reorderUrl: string) => {
+      const result = validateProductForm({ ...valid, reorderUrl });
+      return result.ok ? result.fields.reorderUrl : result.errors.reorderUrl;
+    };
+    expect(link(' https://www.chewy.com/fancy-feast ')).toBe('https://www.chewy.com/fancy-feast');
+    expect(link('chewy.com/fancy-feast')).toBe('https://chewy.com/fancy-feast');
+    expect(link('http://shop.example.com')).toBe('http://shop.example.com');
+    expect(link('   ')).toBeNull();
+  });
+
+  it('rejects a store link that is not a web address', () => {
+    for (const bad of ['not a link', 'ftp://files.example.com', 'chewy', 'javascript:alert(1)']) {
+      expect(validateProductForm({ ...valid, reorderUrl: bad })).toMatchObject({
+        ok: false,
+        errors: { reorderUrl: 'Enter a web address, like chewy.com/…' },
+      });
+    }
+  });
 });
 
 describe('newProductDraft', () => {
@@ -114,7 +138,8 @@ describe('newProductDraft', () => {
       autoDeduct: false,
       lastAutoDeductAt: null,
       lowStock: null,
-      petIds: [],
+      petIds: ['pet-1'],
+      ratedBy: [],
       verdict: 'undecided',
       verdictNote: null,
       reorderUrl: null,
@@ -158,7 +183,15 @@ describe('productFormValues', () => {
   it('prefills the edit form, showing the size in the household unit', () => {
     expect(
       productFormValues(
-        { name: 'Kibble', brand: 'Acme', category: 'dry', container: 'bag', size: { amount: 7257, unit: 'g' } },
+        {
+          name: 'Kibble',
+          brand: 'Acme',
+          category: 'dry',
+          container: 'bag',
+          size: { amount: 7257, unit: 'g' },
+          petIds: ['pet-1'],
+          reorderUrl: 'https://chewy.com/kibble',
+        },
         'lb',
       ),
     ).toEqual({
@@ -170,12 +203,14 @@ describe('productFormValues', () => {
       sizeValue: '16',
       sizeUnit: 'lb',
       startingCount: '',
+      petIds: ['pet-1'],
+      reorderUrl: 'https://chewy.com/kibble',
     });
   });
 
   it("leaves the size blank and starts on the container's default unit when there is none", () => {
     const values = productFormValues(
-      { name: 'Pate', brand: '', category: 'pate', container: 'can', size: null },
+      { name: 'Pate', brand: '', category: 'pate', container: 'can', size: null, petIds: [], reorderUrl: null },
       'kg',
     );
     expect(values.sizeValue).toBe('');
@@ -190,7 +225,10 @@ describe('productFormValues', () => {
       { amount: 355, unit: 'ml' },
     ] as const) {
       for (const preferred of ['lb', 'kg'] as const) {
-        const values = productFormValues({ name: 'X', brand: '', category: 'wet', container: 'can', size }, preferred);
+        const values = productFormValues(
+          { name: 'X', brand: '', category: 'wet', container: 'can', size, petIds: [], reorderUrl: null },
+          preferred,
+        );
         const result = validateProductForm(values);
         expect(result.ok && result.fields.size).toEqual(size);
       }

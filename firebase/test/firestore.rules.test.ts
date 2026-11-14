@@ -201,6 +201,24 @@ describe('subcollections', () => {
   });
 });
 
+describe('pets (photo size)', () => {
+  const petPath = `households/${HID}/pets/pet-1`;
+  const photo = (length: number) => 'data:image/jpeg;base64,' + 'A'.repeat(length - 23);
+
+  it('accepts no photo, a null photo, or one up to 200 000 characters', async () => {
+    await seedHousehold();
+    await assertSucceeds(setDoc(doc(owner(), petPath), { name: 'Miso' }));
+    await assertSucceeds(setDoc(doc(owner(), petPath), { name: 'Miso', photo: null }));
+    await assertSucceeds(setDoc(doc(owner(), petPath), { name: 'Miso', photo: photo(200_000) }));
+  });
+
+  it('rejects a larger photo or one that is not a string', async () => {
+    await seedHousehold();
+    await assertFails(setDoc(doc(owner(), petPath), { name: 'Miso', photo: photo(200_001) }));
+    await assertFails(setDoc(doc(owner(), petPath), { name: 'Miso', photo: 42 }));
+  });
+});
+
 describe('events (append-only)', () => {
   const eventPath = `households/${HID}/events/e2`;
 

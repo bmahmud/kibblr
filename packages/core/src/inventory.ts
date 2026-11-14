@@ -3,7 +3,7 @@ import type { Category, HouseholdSettings, Product } from './schemas';
 /** The product fields stock status and the Inventory list need. */
 export type InventoryProduct = Pick<
   Product,
-  'name' | 'brand' | 'category' | 'onHand' | 'dailyUsage' | 'lowStock' | 'archived'
+  'name' | 'brand' | 'category' | 'onHand' | 'dailyUsage' | 'lowStock' | 'petIds' | 'archived'
 >;
 
 export type StockStatus = 'out' | 'low' | 'ok';
@@ -39,6 +39,8 @@ export type InventoryItem<T> = { product: T; status: StockStatus };
 export type InventoryFilter = {
   query?: string;
   category?: Category | null;
+  /** Only products this pet eats. */
+  petId?: string | null;
 };
 
 const byName = (a: { name: string }, b: { name: string }) =>
@@ -46,7 +48,7 @@ const byName = (a: { name: string }, b: { name: string }) =>
 
 /**
  * The Inventory list (spec section 6.2): non-archived products matching the
- * search and category, split into Low / Out (out first) and OK, by name.
+ * search, category and pet, split into Low / Out (out first) and OK, by name.
  */
 export function groupInventory<T extends InventoryProduct>(
   products: readonly T[],
@@ -57,6 +59,7 @@ export function groupInventory<T extends InventoryProduct>(
   const items = products
     .filter((p) => !p.archived)
     .filter((p) => !filter.category || p.category === filter.category)
+    .filter((p) => !filter.petId || p.petIds.includes(filter.petId))
     .filter((p) => !query || p.name.toLowerCase().includes(query) || p.brand.toLowerCase().includes(query))
     .map((product) => ({ product, status: stockStatus(product, settings) }))
     .sort((a, b) => byName(a.product, b.product));

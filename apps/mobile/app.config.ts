@@ -38,6 +38,14 @@ const config: ExpoConfig = {
       },
     ],
     [
+      'expo-image-picker',
+      {
+        photosPermission: 'Kibblr uses your photos to set a picture of your pet.',
+        cameraPermission: 'Kibblr uses the camera to take a picture of your pet.',
+        microphonePermission: false,
+      },
+    ],
+    [
       'expo-splash-screen',
       {
         backgroundColor: '#208AEF',

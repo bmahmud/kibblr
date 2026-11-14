@@ -1,6 +1,6 @@
 import { eventSchema } from '@kibblr/core';
 import type { StockEvent, WithId } from '@kibblr/core';
-import { collection, limit, onSnapshot, orderBy, query, where } from 'firebase/firestore';
+import { collection, getDocs, limit, onSnapshot, orderBy, query, where } from 'firebase/firestore';
 import type { QueryConstraint, Unsubscribe } from 'firebase/firestore';
 
 import { zodConverter } from '../converters';
@@ -42,4 +42,16 @@ export function watchEvents(
     },
     onError,
   );
+}
+
+/**
+ * Whether the product was used before the event just written (spec section
+ * 6.5, first use). Two equality filters need no composite index: Firestore
+ * merges the single-field ones.
+ */
+export async function hasEarlierUse(householdId: string, productId: string, eventId: string): Promise<boolean> {
+  const snapshot = await getDocs(
+    query(eventsPath(householdId), where('productId', '==', productId), where('type', '==', 'remove'), limit(2)),
+  );
+  return snapshot.docs.some((document) => document.id !== eventId);
 }

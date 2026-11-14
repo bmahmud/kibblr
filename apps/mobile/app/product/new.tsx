@@ -80,6 +80,8 @@ export default function NewProductScreen() {
         sizeValue: '',
         sizeUnit: defaultSizeUnit(defaultContainer('wet'), unit),
         startingCount,
+        petIds: [],
+        reorderUrl: '',
       };
 
   return (

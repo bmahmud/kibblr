@@ -17,6 +17,7 @@ import { inventoryErrorMessage } from '@/features/inventory/errors';
 import { EventRow } from '@/features/inventory/event-row';
 import { useEvents, useHouseholdSettings, useProduct } from '@/features/inventory/hooks';
 import { useStockActions } from '@/features/inventory/use-stock-actions';
+import { FeedbackSection } from '@/features/ratings/feedback-section';
 import { setProductArchived } from '@/firebase/repositories/products';
 import { useTheme } from '@/theme';
 
@@ -233,6 +234,8 @@ function ProductDetail({ product }: { product: WithId<Product> }) {
             </View>
           </View>
         </View>
+
+        <FeedbackSection product={product} />
 
         <View style={section}>
           <Text style={[typography.bodyStrong, { color: colors.text }]}>Recent activity</Text>

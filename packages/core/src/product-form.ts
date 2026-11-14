@@ -1,3 +1,5 @@
+import { z } from 'zod';
+
 import { roundCount } from './count';
 import type { Category, Container, Product } from './schemas';
 import { baseUnitOf, defaultSizeUnit, formatNumber, fromBase, parseNumber, sizeDisplayUnit, toBase } from './units';
@@ -15,12 +17,31 @@ export type ProductFormInput = {
   sizeUnit: DisplayUnit;
   /** Create only: packages on hand right now. Empty means 0. */
   startingCount: string;
+  /** "Who eats it". */
+  petIds: string[];
+  /** Store link, as typed. Optional. */
+  reorderUrl: string;
 };
 
-export type ProductFormErrors = Partial<Record<'name' | 'brand' | 'size' | 'startingCount', string>>;
+export type ProductFormErrors = Partial<Record<'name' | 'brand' | 'size' | 'startingCount' | 'reorderUrl', string>>;
 
 /** The fields the form edits. */
-export type ProductFields = Pick<Product, 'name' | 'brand' | 'category' | 'container' | 'size'>;
+export type ProductFields = Pick<
+  Product,
+  'name' | 'brand' | 'category' | 'container' | 'size' | 'petIds' | 'reorderUrl'
+>;
+
+const webUrl = z.url({ protocol: /^https?$/, hostname: /\./ });
+
+/** A typed store link: https:// is added when left off; null when blank, undefined when not a web address. */
+function parseStoreLink(text: string): string | null | undefined {
+  const trimmed = text.trim();
+  if (!trimmed) {
+    return null;
+  }
+  const withScheme = /^[a-z][a-z0-9+.-]*:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+  return webUrl.safeParse(withScheme).success ? withScheme : undefined;
+}
 
 export type ProductFormResult =
   | { ok: true; fields: ProductFields; startingCount: number }
@@ -66,12 +87,25 @@ export function validateProductForm(input: ProductFormInput): ProductFormResult 
     }
   }
 
+  const reorderUrl = parseStoreLink(input.reorderUrl);
+  if (reorderUrl === undefined) {
+    errors.reorderUrl = 'Enter a web address, like chewy.com/…';
+  }
+
   if (Object.keys(errors).length > 0) {
     return { ok: false, errors };
   }
   return {
     ok: true,
-    fields: { name, brand, category: input.category, container: input.container, size },
+    fields: {
+      name,
+      brand,
+      category: input.category,
+      container: input.container,
+      size,
+      petIds: input.petIds,
+      reorderUrl: reorderUrl ?? null,
+    },
     startingCount,
   };
 }
@@ -95,10 +129,9 @@ export function newProductDraft(
     autoDeduct: false,
     lastAutoDeductAt: null,
     lowStock: null,
-    petIds: [],
+    ratedBy: [],
     verdict: 'undecided',
     verdictNote: null,
-    reorderUrl: null,
     imageUrl: lookup?.imageUrl ?? null,
     source: lookup ? 'lookup' : 'manual',
     archived: false,
@@ -128,5 +161,7 @@ export function productFormValues(product: ProductFields, preferred: 'lb' | 'kg'
     sizeValue,
     sizeUnit,
     startingCount: '',
+    petIds: product.petIds,
+    reorderUrl: product.reorderUrl ?? '',
   };
 }

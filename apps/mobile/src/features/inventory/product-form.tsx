@@ -19,9 +19,10 @@ import { KeyboardAvoidingView, Platform, ScrollView, Text, View } from 'react-na
 
 import { AmountInput } from '@/components/amount-input';
 import { Button } from '@/components/button';
-import { Chips } from '@/components/chips';
+import { Chips, MultiChips } from '@/components/chips';
 import { ProductImage } from '@/components/product-image';
 import { TextField } from '@/components/text-field';
+import { useActivePets } from '@/features/pets/hooks';
 import { useTheme } from '@/theme';
 
 import { CATEGORY_DISPLAY } from './category';
@@ -58,6 +59,7 @@ export function ProductForm({ initial, unit, submitLabel, onSubmit, barcode = nu
   const [containerPicked, setContainerPicked] = useState(initial.mode === 'edit');
   const creating = form.mode === 'create';
   const container = CONTAINER_LABELS[form.container];
+  const pets = useActivePets();
 
   function update(patch: Partial<ProductFormInput>) {
     setForm((current) => ({ ...current, ...patch }));
@@ -162,6 +164,29 @@ Barcode ${barcode}` : ''}
           onChangeUnit={(sizeUnit) => update({ sizeUnit })}
           error={errors.size}
           placeholder={form.container === 'bag' ? '16' : '3'}
+        />
+
+        {pets.length > 0 ? (
+          <View style={{ gap: spacing.xs }}>
+            <Text style={[typography.caption, { color: colors.textMuted }]}>Who eats it</Text>
+            <MultiChips
+              label="Who eats it"
+              options={pets.map((pet) => ({ value: pet.id, label: pet.name }))}
+              selected={form.petIds}
+              onChange={(petIds) => update({ petIds })}
+            />
+          </View>
+        ) : null}
+
+        <TextField
+          label="Store link (optional)"
+          value={form.reorderUrl}
+          onChangeText={(reorderUrl) => update({ reorderUrl })}
+          error={errors.reorderUrl}
+          placeholder="chewy.com/…"
+          autoCapitalize="none"
+          autoCorrect={false}
+          keyboardType="url"
         />
 
         {creating ? (

@@ -15,6 +15,7 @@ function product(overrides: Partial<InventoryProduct> & { id?: string } = {}): I
     onHand: 4,
     dailyUsage: null,
     lowStock: null,
+    petIds: [],
     archived: false,
     ...overrides,
   };
@@ -87,6 +88,17 @@ describe('groupInventory', () => {
     expect(groupInventory(items, settings, { query: '  purr ' }).lowOrOut.map((i) => i.product.id)).toEqual(['low']);
     const { lowOrOut, ok } = groupInventory(items, settings, { query: 'BEEF' });
     expect([...lowOrOut, ...ok].map((i) => i.product.id)).toEqual(['ok-b']);
+  });
+
+  it('filters by pet', () => {
+    const eaten = [
+      product({ id: 'miso', petIds: ['miso'] }),
+      product({ id: 'both', petIds: ['miso', 'biscuit'] }),
+      product({ id: 'nobody' }),
+    ];
+    const { ok } = groupInventory(eaten, settings, { petId: 'biscuit' });
+    expect(ok.map((i) => i.product.id)).toEqual(['both']);
+    expect(groupInventory(eaten, settings, { petId: null }).ok).toHaveLength(3);
   });
 
   it('filters by category', () => {
