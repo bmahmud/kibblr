@@ -17,6 +17,7 @@ Personal pet food inventory app. The full spec is `KIBBLR_DESIGN.md`. Build one 
 - `npm run test:rules`: Firestore rules tests on the emulator (needs Java 21+). Not part of `npm test`.
 - `npm run deploy -w @kibblr/firebase`: deploy rules and indexes to the `kibblr` project (needs `firebase login`).
 - `npm start -w @kibblr/mobile`: Expo dev server
+- Releases (EAS Build, TestFlight, EAS Update): `docs/RELEASE.md`. Run `eas` from `apps/mobile`.
 - `npm run deploy -w @kibblr/barcode-api` / `npm run tail -w @kibblr/barcode-api`: deploy the Worker, watch its logs (needs `npx wrangler login`).
 - In `apps/mobile`, add app dependencies with `npx expo install <pkg>` so versions match the SDK.
 

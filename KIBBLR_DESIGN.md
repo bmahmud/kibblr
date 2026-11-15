@@ -292,17 +292,24 @@ CRUD for pets; archive instead of delete. Per-pet view lists products they eat a
 ### 6.8 Settings
 Notification toggle and hour, default low-stock days, weight unit, sign out, export data (JSON via share sheet), app version.
 - **Reminders** (built in Phase 6): the toggle is per phone, like the permission it needs. The hour (`notifyHour`) and default low-stock days are household settings.
+- **Inventory**: the weight unit, and **Archived products**, a screen to restore or delete them.
+- **Export**: products, pets, ratings, events and the household's name and settings, as `kibblr-export-<date>.json`.
+  - Photos are flagged (`hasPhoto`), not embedded, and member ids are left out.
+  - iOS shares a file (Save to Files); Android shares the text.
 - **Appearance** (System / Light / Dark) and **Color theme** (Kibble, Ocean, Sage, Berry; each tints backgrounds and the accent, in light and dark). Saved per phone, not per household. Built ahead of Phase 7.
 
 ### 6.9 History
 Chronological events with filter by product and pet; each row shows delta, method, and note.
+- Few events name a pet, so the pet filter also keeps events for the foods the pet eats or has rated.
 
 ### 6.10 UX rules
 - Every destructive or inventory-changing action is undoable via toast for 6 seconds, except archive (reversible from settings).
 - Empty states explain the next step ("Scan your first bag").
 - Dark mode supported through theme tokens. Large touch targets; one-hand use.
 - Every tab starts with the Kibblr mark above its title.
-- Offline: the Firestore JS SDK in React Native uses an in-memory cache only, so writes made offline are queued while the app stays open but are lost if the app is killed. Show a small "Offline" banner when `NetInfo` reports no connection and warn before exiting the scanner with pending writes.
+- Offline: the Firestore JS SDK in React Native uses an in-memory cache only, so writes made offline are queued while the app stays open but are lost if the app is killed. Show a small "Offline" banner when `NetInfo` reports no connection.
+  - The banner is on every tab and on the scanner.
+  - Stock changes are transactions, which need the server and fail offline rather than queue, so there are no pending writes to warn about. The banner says stock changes need a connection.
 
 ---
 
@@ -396,8 +403,9 @@ All functions are pure and unit-tested.
 
 ## 12. Build and release
 
-- `app.config.ts`: name "Kibblr", slug `kibblr`, `ios.bundleIdentifier` `com.<owner>.kibblr` (**open question: confirm owner before first EAS build; hard to change later**), `expo-camera` plugin with a clear `cameraPermission` string, `expo-notifications` plugin.
+- `app.config.ts`: name "Kibblr", slug `kibblr`, `ios.bundleIdentifier` and `android.package` `com.bmahmud.kibblr` (settled; can't change after the first App Store Connect build), `ios.config.usesNonExemptEncryption: false`, `expo-camera` plugin with a clear `cameraPermission` string, `expo-notifications` plugin.
 - `eas.json` profiles: `development` (dev client, optional), `preview` (internal), `production` (auto-increment build number). Configure `eas update` channels matching profiles.
+- Step by step, including the EAS environment variables builds need: `docs/RELEASE.md`.
 - Release path: Apple Developer enrollment (individual) -> `eas build -p ios --profile production` -> `eas submit -p ios` -> internal TestFlight tester. TestFlight builds expire after 90 days, so rebuild and resubmit before then.
 - CI (`.github/workflows/ci.yml`): install, lint, typecheck, `packages/core` and Worker tests, Firestore rules tests with the emulator. Builds are triggered manually, not on every push.
 
@@ -436,7 +444,7 @@ All functions are pure and unit-tested.
 ---
 
 ## 15. Open questions (ask me before assuming)
-1. Bundle ID owner string.
+1. ~~Bundle ID owner string.~~ Answered: `com.bmahmud.kibblr`.
 2. ~~Which pets and species to seed on first run.~~ Answered: none. The Pets tab starts empty.
 3. Preferred default units (lb/oz vs kg/g) on the input forms.
 4. Whether wet food multipacks should default the scan multiplier to 12 or 1.
