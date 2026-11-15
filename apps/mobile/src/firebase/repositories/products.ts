@@ -16,6 +16,7 @@ import type { Unsubscribe } from 'firebase/firestore';
 
 import { zodConverter } from '../converters';
 import { db } from '../init';
+import { readAll } from './read-all';
 
 export const productConverter = zodConverter(productSchema);
 
@@ -142,4 +143,9 @@ export async function deleteProduct(householdId: string, productId: string): Pro
   }
   batch.delete(productPath(householdId, productId));
   await batch.commit();
+}
+
+/** Every product, archived ones too, once (data export). */
+export function getProducts(householdId: string): Promise<WithId<Product>[]> {
+  return readAll(query(productsPath(householdId)).withConverter(productConverter), 'product');
 }

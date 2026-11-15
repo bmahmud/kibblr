@@ -5,6 +5,7 @@ import type { Unsubscribe } from 'firebase/firestore';
 
 import { zodConverter } from '../converters';
 import { db } from '../init';
+import { readAll } from './read-all';
 
 const petConverter = zodConverter(petSchema);
 
@@ -49,4 +50,9 @@ export function updatePet(householdId: string, petId: string, fields: PetFields)
 /** Pets are archived, never deleted (spec section 6.7). */
 export function setPetArchived(householdId: string, petId: string, archived: boolean): Promise<void> {
   return updateDoc(petPath(householdId, petId), { archived });
+}
+
+/** Every pet, once (data export). */
+export function getPets(householdId: string): Promise<WithId<Pet>[]> {
+  return readAll(query(petsPath(householdId)).withConverter(petConverter), 'pet');
 }

@@ -1,3 +1,4 @@
+import { activePets, eventsForPet } from '@kibblr/core';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, FlatList, View } from 'react-native';
@@ -7,13 +8,14 @@ import { Chips } from '@/components/chips';
 import { EmptyState } from '@/components/empty-state';
 import { EventRow } from '@/features/inventory/event-row';
 import { useEvents, useProducts } from '@/features/inventory/hooks';
+import { usePets } from '@/features/pets/hooks';
 import { useTheme } from '@/theme';
 
 const PAGE = 50;
 
-/** Every stock change, newest first, optionally for one product (spec section 6.9). */
+/** Every stock change, newest first, optionally for one product or pet (spec section 6.9). */
 export default function HistoryScreen() {
-  const { productId } = useLocalSearchParams<{ productId?: string }>();
+  const { productId, petId } = useLocalSearchParams<{ productId?: string; petId?: string }>();
   const { colors, spacing } = useTheme();
   const [max, setMax] = useState(PAGE);
   // Archived products too, so their old events still have names and containers.
@@ -31,7 +33,14 @@ export default function HistoryScreen() {
       : []),
   ];
 
-  const list = events.status === 'ready' ? events.data : [];
+  const pets = usePets();
+  const petOptions =
+    pets.status === 'ready' ? activePets(pets.data).map((pet) => ({ value: pet.id, label: pet.name })) : [];
+
+  const loaded = events.status === 'ready' ? events.data : [];
+  // A pet's history: events naming it, or for the foods it eats or rated.
+  const list =
+    petId && products.status === 'ready' ? eventsForPet(loaded, products.data, petId) : loaded;
 
   return (
     <FlatList
@@ -41,7 +50,7 @@ export default function HistoryScreen() {
       data={list}
       keyExtractor={(event) => event.id}
       ListHeaderComponent={
-        <View style={{ paddingVertical: spacing.md }}>
+        <View style={{ paddingVertical: spacing.md, gap: spacing.sm }}>
           <Chips
             label="Product"
             scroll
@@ -52,6 +61,15 @@ export default function HistoryScreen() {
               router.setParams({ productId: value === 'all' ? undefined : value });
             }}
           />
+          {petOptions.length > 0 ? (
+            <Chips
+              label="Pet"
+              scroll
+              options={[{ value: 'all', label: 'All pets' }, ...petOptions]}
+              selected={petId ?? 'all'}
+              onSelect={(value) => router.setParams({ petId: value === 'all' ? undefined : value })}
+            />
+          ) : null}
         </View>
       }
       ListEmptyComponent={
@@ -60,7 +78,10 @@ export default function HistoryScreen() {
         ) : events.status === 'error' ? (
           <EmptyState title="Couldn't load" body={events.message} />
         ) : (
-          <EmptyState title="Nothing yet" body="Every add and use shows up here." />
+          <EmptyState
+            title="Nothing yet"
+            body={petId ? 'No changes to this pet’s foods yet. Set who eats a product on its Edit page.' : 'Every add and use shows up here.'}
+          />
         )
       }
       renderItem={({ item }) => {
@@ -75,7 +96,7 @@ export default function HistoryScreen() {
         ) : null;
       }}
       ListFooterComponent={
-        list.length === max ? (
+        loaded.length === max ? (
           <View style={{ paddingTop: spacing.lg }}>
             <Button label="Load more" variant="secondary" onPress={() => setMax((n) => n + PAGE)} />
           </View>

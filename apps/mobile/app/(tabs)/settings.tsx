@@ -1,13 +1,17 @@
+import type { WeightUnit } from '@kibblr/core';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
 import { useEffect, useState } from 'react';
 import { AppState, Linking, Platform, Pressable, ScrollView, Switch, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/button';
 import { Chips } from '@/components/chips';
+import { NavLink } from '@/components/nav-link';
 import { TabHeader } from '@/components/tab-header';
 import { useToast } from '@/components/toast';
 import { useAuth, useSignedIn } from '@/features/auth/auth-provider';
 import { useHousehold } from '@/features/auth/use-household';
+import { exportHousehold } from '@/features/export/export-data';
 import { inventoryErrorMessage } from '@/features/inventory/errors';
 import { useHouseholdSettings } from '@/features/inventory/hooks';
 import { notificationPermission, requestNotificationPermission } from '@/features/notifications/low-stock';
@@ -17,21 +21,29 @@ import { updateHouseholdSettings } from '@/firebase/repositories/households';
 import { THEMES, useTheme, useThemePreferences } from '@/theme';
 import type { Appearance, ColorTheme } from '@/theme';
 
+const UNIT_OPTIONS: { value: WeightUnit; label: string }[] = [
+  { value: 'lb', label: 'lb and oz' },
+  { value: 'kg', label: 'kg and g' },
+];
+
 const APPEARANCE_OPTIONS: { value: Appearance; label: string }[] = [
   { value: 'system', label: 'System' },
   { value: 'light', label: 'Light' },
   { value: 'dark', label: 'Dark' },
 ];
 
-// Reminders, appearance, color theme and account; the rest of Settings is Phase 7.
+// Settings (spec section 6.8): reminders, inventory, appearance, color theme, data and account.
 export default function SettingsScreen() {
   const { signOut } = useAuth();
-  const { user } = useSignedIn();
+  const { user, householdId } = useSignedIn();
   const household = useHousehold();
   const { colors, radius, spacing, typography } = useTheme();
   const insets = useSafeAreaInsets();
   const { appearance, setAppearance } = useThemePreferences();
+  const settings = useHouseholdSettings();
+  const toast = useToast();
   const [signingOut, setSigningOut] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   async function handleSignOut() {
     setSigningOut(true);
@@ -40,6 +52,29 @@ export default function SettingsScreen() {
     } finally {
       setSigningOut(false);
     }
+  }
+
+  async function handleExport() {
+    if (household.status !== 'ready') {
+      return;
+    }
+    setExporting(true);
+    try {
+      const done = await exportHousehold(household.household);
+      if (done) {
+        toast.show({ message: `Exported ${String(done.products)} products and ${String(done.events)} changes.` });
+      }
+    } catch (error) {
+      toast.show({ message: inventoryErrorMessage(error), tone: 'error' });
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  function setUnit(preferredWeightUnit: WeightUnit) {
+    updateHouseholdSettings(householdId, { preferredWeightUnit }).catch((error: unknown) =>
+      toast.show({ message: inventoryErrorMessage(error), tone: 'error' }),
+    );
   }
 
   const section = { gap: spacing.md, padding: spacing.lg, borderRadius: radius.lg, backgroundColor: colors.surface };
@@ -66,6 +101,21 @@ export default function SettingsScreen() {
       </View>
 
       <View style={{ gap: spacing.sm }}>
+        <Text style={sectionTitle}>Inventory</Text>
+        <View style={section}>
+          <Text style={[typography.caption, { color: colors.textMuted }]}>Package sizes in</Text>
+          <Chips
+            label="Weight unit"
+            options={UNIT_OPTIONS}
+            selected={settings.preferredWeightUnit}
+            onSelect={setUnit}
+            disabled={household.status !== 'ready'}
+          />
+          <NavLink href="/archived" label="Archived products" />
+        </View>
+      </View>
+
+      <View style={{ gap: spacing.sm }}>
         <Text style={sectionTitle}>Appearance</Text>
         <View style={section}>
           <Chips label="Appearance" options={APPEARANCE_OPTIONS} selected={appearance} onSelect={setAppearance} />
@@ -78,6 +128,22 @@ export default function SettingsScreen() {
           {THEMES.map((theme) => (
             <ThemeCard key={theme.id} theme={theme} />
           ))}
+        </View>
+      </View>
+
+      <View style={{ gap: spacing.sm }}>
+        <Text style={sectionTitle}>Data</Text>
+        <View style={section}>
+          <Text style={[typography.caption, { color: colors.textMuted }]}>
+            Everything in your household as a JSON file: products, pets, ratings and history. Photos are left out.
+          </Text>
+          <Button
+            label="Export data"
+            variant="secondary"
+            onPress={() => void handleExport()}
+            busy={exporting}
+            disabled={household.status !== 'ready'}
+          />
         </View>
       </View>
 
@@ -96,6 +162,8 @@ export default function SettingsScreen() {
           <Button label="Sign out" variant="secondary" onPress={() => void handleSignOut()} busy={signingOut} />
         </View>
       </View>
+
+      <Text style={[typography.caption, { color: colors.textMuted, textAlign: 'center' }]}>{appVersion()}</Text>
     </ScrollView>
   );
 }
@@ -314,4 +382,11 @@ function Stepper({
       {step('+', 'Increase', onIncrement)}
     </View>
   );
+}
+
+/** "Kibblr 1.0.0 (12)": the build number only in a standalone build. */
+function appVersion(): string {
+  const version = Constants.expoConfig?.version ?? '';
+  const build = Constants.nativeBuildVersion;
+  return `Kibblr ${version}${build && Constants.executionEnvironment === ExecutionEnvironment.Standalone ? ` (${build})` : ''}`;
 }

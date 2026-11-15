@@ -3,13 +3,15 @@ import { Text, View } from 'react-native';
 
 import { useTheme } from '@/theme';
 
+import { OfflineBanner } from './offline-banner';
+
 type Props = {
   title: string;
   /** Actions on the right of the title, like Scan or + Add. */
   children?: ReactNode;
 };
 
-/** The top of every tab: the Kibblr mark, then the screen's title and its actions. */
+/** The top of every tab: the Kibblr mark, the screen's title and its actions, and the offline banner. */
 export function TabHeader({ title, children }: Props) {
   const { colors, radius, spacing, typography } = useTheme();
 
@@ -38,6 +40,7 @@ export function TabHeader({ title, children }: Props) {
         </Text>
         {children}
       </View>
+      <OfflineBanner />
     </View>
   );
 }

@@ -5,6 +5,7 @@ import type { QueryConstraint, Unsubscribe } from 'firebase/firestore';
 
 import { zodConverter } from '../converters';
 import { db } from '../init';
+import { readAll } from './read-all';
 
 const eventConverter = zodConverter(eventSchema);
 
@@ -84,4 +85,9 @@ export function watchRecentEvents(
     },
     onError,
   );
+}
+
+/** The whole ledger, once (data export). */
+export function getEvents(householdId: string): Promise<WithId<StockEvent>[]> {
+  return readAll(query(eventsPath(householdId)).withConverter(eventConverter), 'event');
 }
