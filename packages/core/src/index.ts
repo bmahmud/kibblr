@@ -94,3 +94,6 @@ export type { RatingPromptReason } from './ratings';
 
 export { shoppingList, shoppingListText } from './shopping';
 export type { ShoppingItem, ShoppingProduct } from './shopping';
+
+export { buildExport, eventsForPet, exportFileName } from './export';
+export type { ExportInput, KibblrExport } from './export';
