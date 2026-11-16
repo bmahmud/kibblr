@@ -6,7 +6,7 @@ const BUNDLE_ID = 'com.bmahmud.kibblr';
 
 // The EAS project this app builds and updates under. `eas init` prints it;
 // it is an identifier, not a secret. Until it is set, builds have no EAS Update.
-const EAS_PROJECT_ID = '';
+const EAS_PROJECT_ID = 'b0dbbf72-e600-4986-9720-ce38fecac83c';
 
 // The Kibblr orange behind the icon and splash.
 const BRAND = '#C8742E';
