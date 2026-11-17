@@ -17,6 +17,7 @@ import type { Unsubscribe } from 'firebase/firestore';
 import { zodConverter } from '../converters';
 import { db } from '../init';
 import { productPath } from './products';
+import { readAll } from './read-all';
 
 const ratingConverter = zodConverter(ratingSchema);
 
@@ -77,4 +78,9 @@ export function markRatedBy(householdId: string, productId: string, petIds: stri
     ratedBy: arrayUnion(...petIds),
     updatedAt: serverTimestamp(),
   });
+}
+
+/** Every rating of one product, once (data export). */
+export function getRatings(householdId: string, productId: string): Promise<WithId<Rating>[]> {
+  return readAll(query(ratingsPath(householdId, productId)).withConverter(ratingConverter), 'rating');
 }

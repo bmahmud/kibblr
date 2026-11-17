@@ -19,6 +19,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/button';
 import { Chips } from '@/components/chips';
+import { OfflineBanner } from '@/components/offline-banner';
 import { TextField } from '@/components/text-field';
 import { QuickUsePanel } from '@/features/scan/quick-use-panel';
 import { ResultCard } from '@/features/scan/result-card';
@@ -215,6 +216,7 @@ export default function ScanScreen() {
             paddingBottom: insets.bottom + spacing.lg,
             gap: spacing.md,
           }}>
+          <OfflineBanner />
           {flow.pendingUse ? (
             <QuickUsePanel pending={flow.pendingUse} onUse={flow.applyUse} onCancel={flow.cancelUse} />
           ) : (

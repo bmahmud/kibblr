@@ -1,22 +1,40 @@
 import type { ExpoConfig } from 'expo/config';
 
-// ios.bundleIdentifier is intentionally unset until the owner string is
-// confirmed (spec section 15, open question 1). Expo Go does not need it.
+// Bundle ID owner confirmed 2026-11-15 (spec section 15, open question 1).
+// It can't change once the app is in App Store Connect.
+const BUNDLE_ID = 'com.bmahmud.kibblr';
+
+// The EAS project this app builds and updates under. `eas init` prints it;
+// it is an identifier, not a secret. Until it is set, builds have no EAS Update.
+const EAS_PROJECT_ID = 'b0dbbf72-e600-4986-9720-ce38fecac83c';
+
+// The Kibblr orange behind the icon and splash.
+const BRAND = '#C8742E';
+
 const config: ExpoConfig = {
   name: 'Kibblr',
   slug: 'kibblr',
   scheme: 'kibblr',
-  version: '0.1.0',
+  version: '1.0.0',
+  // An update reaches only builds with the same app version (spec section 12: EAS Update for JS-only fixes).
+  runtimeVersion: { policy: 'appVersion' },
+  ...(EAS_PROJECT_ID
+    ? { updates: { url: `https://u.expo.dev/${EAS_PROJECT_ID}` }, extra: { eas: { projectId: EAS_PROJECT_ID } } }
+    : {}),
   orientation: 'portrait',
   icon: './assets/images/icon.png',
   userInterfaceStyle: 'automatic',
   ios: {
+    bundleIdentifier: BUNDLE_ID,
     icon: './assets/expo.icon',
     supportsTablet: false,
+    // Only HTTPS and the OS's own encryption: no export compliance questions per build.
+    config: { usesNonExemptEncryption: false },
   },
   android: {
+    package: BUNDLE_ID,
     adaptiveIcon: {
-      backgroundColor: '#E6F4FE',
+      backgroundColor: BRAND,
       foregroundImage: './assets/images/android-icon-foreground.png',
       backgroundImage: './assets/images/android-icon-background.png',
       monochromeImage: './assets/images/android-icon-monochrome.png',
@@ -55,9 +73,9 @@ const config: ExpoConfig = {
     [
       'expo-splash-screen',
       {
-        backgroundColor: '#208AEF',
+        backgroundColor: BRAND,
         image: './assets/images/splash-icon.png',
-        imageWidth: 76,
+        imageWidth: 120,
       },
     ],
   ],
