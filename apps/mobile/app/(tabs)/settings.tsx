@@ -1,5 +1,6 @@
 import type { WeightUnit } from '@kibblr/core';
 import Constants, { ExecutionEnvironment } from 'expo-constants';
+import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { AppState, Linking, Platform, Pressable, ScrollView, Switch, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -160,6 +161,7 @@ export default function SettingsScreen() {
                 : '…'}
           </Text>
           <Button label="Sign out" variant="secondary" onPress={() => void handleSignOut()} busy={signingOut} />
+          <Button label="Delete account" variant="link" tone="danger" onPress={() => router.push('/delete-account')} />
         </View>
       </View>
 

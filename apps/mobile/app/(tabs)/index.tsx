@@ -103,6 +103,7 @@ export default function InventoryScreen() {
             onChangeText={setQuery}
             placeholder="Search name or brand"
             autoCorrect={false}
+            spellCheck={false}
             clearButtonMode="while-editing"
             returnKeyType="search"
           />

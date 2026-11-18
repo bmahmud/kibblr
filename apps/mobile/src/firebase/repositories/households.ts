@@ -1,10 +1,12 @@
 import { householdSchema, newHousehold, userDocSchema } from '@kibblr/core';
 import type { Household, HouseholdSettings, WithId } from '@kibblr/core';
-import { collection, doc, onSnapshot, runTransaction, serverTimestamp, updateDoc } from 'firebase/firestore';
+import { collection, doc, getDocs, onSnapshot, runTransaction, serverTimestamp, updateDoc } from 'firebase/firestore';
 import type { Unsubscribe } from 'firebase/firestore';
 
 import { zodConverter } from '../converters';
 import { db } from '../init';
+import { commitInChunks } from './batch';
+import type { BatchOp } from './batch';
 
 const householdConverter = zodConverter(householdSchema);
 const userConverter = zodConverter(userDocSchema);
@@ -60,4 +62,30 @@ export async function updateHouseholdSettings(householdId: string, patch: Partia
     fields[`settings.${key}`] = value;
   }
   await updateDoc(doc(db, 'households', householdId), fields);
+}
+
+/**
+ * Deletes everything in a household and the user's pointer to it (account
+ * deletion). Order matters for the rules: subcollections first, while the
+ * user is still a member; then the household; then `users/{uid}`. A run cut
+ * short leaves a smaller household that the next attempt finishes.
+ */
+export async function deleteHouseholdData(householdId: string, uid: string): Promise<void> {
+  const household = doc(db, 'households', householdId);
+  const ops: BatchOp[] = [];
+  const products = await getDocs(collection(household, 'products'));
+  for (const product of products.docs) {
+    const ratings = await getDocs(collection(product.ref, 'ratings'));
+    ops.push(...ratings.docs.map((rating): BatchOp => ({ kind: 'delete', ref: rating.ref })));
+  }
+  ops.push(...products.docs.map((product): BatchOp => ({ kind: 'delete', ref: product.ref })));
+  for (const name of ['pets', 'events']) {
+    const snapshot = await getDocs(collection(household, name));
+    ops.push(...snapshot.docs.map((item): BatchOp => ({ kind: 'delete', ref: item.ref })));
+  }
+  await commitInChunks(ops);
+  await commitInChunks([
+    { kind: 'delete', ref: household },
+    { kind: 'delete', ref: doc(db, 'users', uid) },
+  ]);
 }
