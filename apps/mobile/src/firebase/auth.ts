@@ -1,6 +1,9 @@
 import {
+  EmailAuthProvider,
   createUserWithEmailAndPassword,
+  deleteUser,
   onAuthStateChanged,
+  reauthenticateWithCredential,
   sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signOut as firebaseSignOut,
@@ -42,4 +45,22 @@ export async function idToken(): Promise<string | null> {
   } catch {
     return null;
   }
+}
+
+/**
+ * Confirms the signed-in user's password. Firebase only deletes a login that
+ * signed in recently, so account deletion asks for it first.
+ */
+export async function reauthenticate(password: string): Promise<User> {
+  const user = auth.currentUser;
+  if (!user?.email) {
+    throw new Error('Not signed in.');
+  }
+  const result = await reauthenticateWithCredential(user, EmailAuthProvider.credential(user.email, password));
+  return result.user;
+}
+
+/** Deletes the login itself; the auth listener then signs the app out. */
+export async function deleteLogin(user: User): Promise<void> {
+  await deleteUser(user);
 }
