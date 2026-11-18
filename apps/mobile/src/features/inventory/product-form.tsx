@@ -15,7 +15,7 @@ import type {
   WeightUnit,
 } from '@kibblr/core';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, Text, View } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
 
 import { AmountInput } from '@/components/amount-input';
 import { Button } from '@/components/button';
@@ -85,123 +85,126 @@ export function ProductForm({ initial, unit, submitLabel, onSubmit, barcode = nu
   }
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView
-        style={{ backgroundColor: colors.background }}
-        keyboardShouldPersistTaps="handled"
-        contentInsetAdjustmentBehavior="automatic"
-        contentContainerStyle={{ padding: spacing.xl, gap: spacing.lg }}>
-        {lookup ? (
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
-            {lookup.imageUrl ? (
-              <ProductImage imageUrl={lookup.imageUrl} icon={CATEGORY_DISPLAY[form.category].icon} size={64} />
-            ) : null}
-            <Text style={[typography.caption, { color: colors.textMuted, flex: 1 }]}>
-              Filled in from {lookup.sourceLabel}. Check the details before saving.
-              {barcode ? `
+    // Not KeyboardAvoidingView: inside a modal sheet it measures from the wrong
+    // origin and left the Save button under the keyboard.
+    <ScrollView
+      style={{ backgroundColor: colors.background }}
+      keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="interactive"
+      automaticallyAdjustKeyboardInsets
+      contentInsetAdjustmentBehavior="automatic"
+      contentContainerStyle={{ padding: spacing.xl, gap: spacing.lg }}>
+      {lookup ? (
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+          {lookup.imageUrl ? (
+            <ProductImage imageUrl={lookup.imageUrl} icon={CATEGORY_DISPLAY[form.category].icon} size={64} />
+          ) : null}
+          <Text style={[typography.caption, { color: colors.textMuted, flex: 1 }]}>
+            Filled in from {lookup.sourceLabel}. Check the details before saving.
+            {barcode ? `
 Barcode ${barcode}` : ''}
-            </Text>
-          </View>
-        ) : barcode ? (
-          <Text style={[typography.caption, { color: colors.textMuted }]}>
-            Barcode {barcode} · not in your inventory yet
           </Text>
-        ) : null}
-        <TextField
-          label="Name"
-          value={form.name}
-          onChangeText={(name) => update({ name })}
-          error={errors.name}
-          placeholder="Salmon Feast"
-          autoCapitalize="words"
-        />
-        <TextField
-          label="Brand (optional)"
-          value={form.brand}
-          onChangeText={(brand) => update({ brand })}
-          error={errors.brand}
-          autoCapitalize="words"
-        />
+        </View>
+      ) : barcode ? (
+        <Text style={[typography.caption, { color: colors.textMuted }]}>
+          Barcode {barcode} · not in your inventory yet
+        </Text>
+      ) : null}
+      <TextField
+        label="Name"
+        value={form.name}
+        onChangeText={(name) => update({ name })}
+        error={errors.name}
+        placeholder="Salmon Feast"
+        autoCapitalize="words"
+      />
+      <TextField
+        label="Brand (optional)"
+        value={form.brand}
+        onChangeText={(brand) => update({ brand })}
+        error={errors.brand}
+        autoCapitalize="words"
+        autoCorrect={false}
+      />
 
+      <View style={{ gap: spacing.xs }}>
+        <Text style={[typography.caption, { color: colors.textMuted }]}>Type</Text>
+        <Chips
+          label="Type"
+          options={CATEGORIES.map((value) => ({
+            value,
+            label: `${CATEGORY_DISPLAY[value].icon} ${CATEGORY_DISPLAY[value].label}`,
+          }))}
+          selected={form.category}
+          onSelect={(category) => {
+            update({ category });
+            if (!containerPicked) {
+              changeContainer(defaultContainer(category));
+            }
+          }}
+        />
+      </View>
+
+      <View style={{ gap: spacing.xs }}>
+        <Text style={[typography.caption, { color: colors.textMuted }]}>Comes in a</Text>
+        <Chips
+          label="Comes in a"
+          scroll
+          options={CONTAINER_OPTIONS}
+          selected={form.container}
+          onSelect={(next) => {
+            setContainerPicked(true);
+            changeContainer(next);
+          }}
+        />
+      </View>
+
+      <AmountInput
+        label={`Size of one ${container.one} (optional)`}
+        units={SIZE_UNITS[unit]}
+        value={form.sizeValue}
+        onChangeValue={(sizeValue) => update({ sizeValue })}
+        unit={form.sizeUnit}
+        onChangeUnit={(sizeUnit) => update({ sizeUnit })}
+        error={errors.size}
+        placeholder={form.container === 'bag' ? '16' : '3'}
+      />
+
+      {pets.length > 0 ? (
         <View style={{ gap: spacing.xs }}>
-          <Text style={[typography.caption, { color: colors.textMuted }]}>Type</Text>
-          <Chips
-            label="Type"
-            options={CATEGORIES.map((value) => ({
-              value,
-              label: `${CATEGORY_DISPLAY[value].icon} ${CATEGORY_DISPLAY[value].label}`,
-            }))}
-            selected={form.category}
-            onSelect={(category) => {
-              update({ category });
-              if (!containerPicked) {
-                changeContainer(defaultContainer(category));
-              }
-            }}
+          <Text style={[typography.caption, { color: colors.textMuted }]}>Who eats it</Text>
+          <MultiChips
+            label="Who eats it"
+            options={pets.map((pet) => ({ value: pet.id, label: pet.name }))}
+            selected={form.petIds}
+            onChange={(petIds) => update({ petIds })}
           />
         </View>
+      ) : null}
 
-        <View style={{ gap: spacing.xs }}>
-          <Text style={[typography.caption, { color: colors.textMuted }]}>Comes in a</Text>
-          <Chips
-            label="Comes in a"
-            scroll
-            options={CONTAINER_OPTIONS}
-            selected={form.container}
-            onSelect={(next) => {
-              setContainerPicked(true);
-              changeContainer(next);
-            }}
-          />
-        </View>
+      <TextField
+        label="Store link (optional)"
+        value={form.reorderUrl}
+        onChangeText={(reorderUrl) => update({ reorderUrl })}
+        error={errors.reorderUrl}
+        placeholder="chewy.com/…"
+        autoCapitalize="none"
+        autoCorrect={false}
+        keyboardType="url"
+      />
 
-        <AmountInput
-          label={`Size of one ${container.one} (optional)`}
-          units={SIZE_UNITS[unit]}
-          value={form.sizeValue}
-          onChangeValue={(sizeValue) => update({ sizeValue })}
-          unit={form.sizeUnit}
-          onChangeUnit={(sizeUnit) => update({ sizeUnit })}
-          error={errors.size}
-          placeholder={form.container === 'bag' ? '16' : '3'}
-        />
-
-        {pets.length > 0 ? (
-          <View style={{ gap: spacing.xs }}>
-            <Text style={[typography.caption, { color: colors.textMuted }]}>Who eats it</Text>
-            <MultiChips
-              label="Who eats it"
-              options={pets.map((pet) => ({ value: pet.id, label: pet.name }))}
-              selected={form.petIds}
-              onChange={(petIds) => update({ petIds })}
-            />
-          </View>
-        ) : null}
-
+      {creating ? (
         <TextField
-          label="Store link (optional)"
-          value={form.reorderUrl}
-          onChangeText={(reorderUrl) => update({ reorderUrl })}
-          error={errors.reorderUrl}
-          placeholder="chewy.com/…"
-          autoCapitalize="none"
-          autoCorrect={false}
-          keyboardType="url"
+          label={`How many ${container.many} on hand now`}
+          value={form.startingCount}
+          onChangeText={(startingCount) => update({ startingCount })}
+          error={errors.startingCount}
+          keyboardType="decimal-pad"
+          placeholder="0"
         />
+      ) : null}
 
-        {creating ? (
-          <TextField
-            label={`How many ${container.many} on hand now`}
-            value={form.startingCount}
-            onChangeText={(startingCount) => update({ startingCount })}
-            error={errors.startingCount}
-            keyboardType="decimal-pad"
-            placeholder="0"
-          />
-        ) : null}
-
-        <Button label={submitLabel} onPress={() => void submit()} busy={saving} />
-      </ScrollView>
-    </KeyboardAvoidingView>
+      <Button label={submitLabel} onPress={() => void submit()} busy={saving} />
+    </ScrollView>
   );
 }

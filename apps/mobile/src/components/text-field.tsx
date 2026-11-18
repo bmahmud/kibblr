@@ -14,6 +14,10 @@ type Props = Omit<TextInputProps, 'style'> & {
 
 export function TextField({ label, hideLabel = false, error, ref, ...input }: Props) {
   const { colors, radius, spacing, typography, touchTarget } = useTheme();
+  // Words get spell check (underlined, tap for suggestions) and autocorrect;
+  // numbers, emails, links and passwords get neither. A field can opt out,
+  // e.g. names, which keep the underline but aren't "corrected".
+  const words = !input.secureTextEntry && (input.keyboardType === undefined || input.keyboardType === 'default');
 
   return (
     <View style={{ gap: spacing.xs }}>
@@ -21,6 +25,8 @@ export function TextField({ label, hideLabel = false, error, ref, ...input }: Pr
       <TextInput
         ref={ref}
         accessibilityLabel={label}
+        spellCheck={words}
+        autoCorrect={words}
         placeholderTextColor={colors.textMuted}
         style={[
           typography.body,
