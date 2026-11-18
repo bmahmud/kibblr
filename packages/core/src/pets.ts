@@ -31,7 +31,7 @@ export function newPetDraft(fields: PetFields): PetDraft {
   return { ...fields, archived: false };
 }
 
-/** Pets that can be picked or asked about: not archived, by name (spec section 6.7: archive, never delete). */
+/** Pets that can be picked or asked about: not archived, by name (spec section 6.7). */
 export function activePets<T extends Pick<Pet, 'name' | 'archived'>>(pets: readonly T[]): T[] {
   return pets
     .filter((pet) => !pet.archived)
@@ -60,4 +60,18 @@ export function petInitials(name: string): string {
     .slice(0, 2)
     .map((word) => word.charAt(0).toUpperCase())
     .join('');
+}
+
+/**
+ * What deleting a pet touches (spec section 6.7): the products to take its
+ * tag off (`petIds` or `ratedBy`), and the products whose ratings to search
+ * for its ratings. Product ids, sorted.
+ */
+export function petDeletePlan(
+  products: readonly (Pick<Product, 'petIds' | 'ratedBy'> & { id: string })[],
+  petId: string,
+): { untag: string[]; ratingsOn: string[] } {
+  const untag = products.filter((p) => p.petIds.includes(petId) || p.ratedBy.includes(petId)).map((p) => p.id);
+  const ratingsOn = products.filter((p) => p.ratedBy.includes(petId)).map((p) => p.id);
+  return { untag: untag.sort(), ratingsOn: ratingsOn.sort() };
 }
