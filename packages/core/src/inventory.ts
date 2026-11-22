@@ -1,5 +1,8 @@
+import { roundCount } from './count';
 import { effectiveRate } from './prediction';
-import type { Category, HouseholdSettings, Product } from './schemas';
+import { CONTAINERS } from './schemas';
+import type { Category, Container, HouseholdSettings, Product } from './schemas';
+import type { Size } from './units';
 
 /** The product fields stock status and the Inventory list need. */
 export type InventoryProduct = Pick<
@@ -80,5 +83,54 @@ export function groupInventory<T extends InventoryProduct>(
   return {
     lowOrOut: [...items.filter((i) => i.status === 'out'), ...items.filter((i) => i.status === 'low')],
     ok: items.filter((i) => i.status === 'ok'),
+  };
+}
+
+/** The product fields the stock totals need. */
+export type StockTotalsProduct = Pick<Product, 'container' | 'onHand' | 'size'>;
+
+export type StockTotals = {
+  /** Packages on hand per container, most first; containers with none are left out. */
+  containers: { container: Container; count: number }[];
+  /** Net weight on hand, from products with a size in grams; null when none has one. */
+  weight: Size | null;
+  /** Same for volume (bottles). */
+  volume: Size | null;
+  /** In-stock products without a size, so the weight is "at least". */
+  unsized: number;
+};
+
+/**
+ * What is on hand altogether (the Inventory summary): packages by container,
+ * since cans and bags don't add up, plus total weight and volume where
+ * package sizes are known.
+ */
+export function stockTotals(products: readonly StockTotalsProduct[]): StockTotals {
+  const counts = new Map<Container, number>();
+  let grams = 0;
+  let millilitres = 0;
+  let unsized = 0;
+  for (const product of products) {
+    if (product.onHand <= 0) {
+      continue;
+    }
+    counts.set(product.container, (counts.get(product.container) ?? 0) + product.onHand);
+    if (!product.size) {
+      unsized += 1;
+    } else if (product.size.unit === 'g') {
+      grams += product.onHand * product.size.amount;
+    } else {
+      millilitres += product.onHand * product.size.amount;
+    }
+  }
+  const containers = CONTAINERS.filter((container) => counts.has(container))
+    .map((container) => ({ container, count: roundCount(counts.get(container) ?? 0) }))
+    // Stable sort: ties keep the CONTAINERS order.
+    .sort((a, b) => b.count - a.count);
+  return {
+    containers,
+    weight: grams > 0 ? { amount: grams, unit: 'g' } : null,
+    volume: millilitres > 0 ? { amount: millilitres, unit: 'ml' } : null,
+    unsized,
   };
 }

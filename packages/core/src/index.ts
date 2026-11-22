@@ -28,8 +28,16 @@ export type { AuthMode, CredentialErrors, CredentialInput } from './auth';
 export { computeAdjustment, computeStockChange, undoDelta } from './stock';
 export type { StockChange } from './stock';
 
-export { formatRunway, groupInventory, runwayDays, stockStatus } from './inventory';
-export type { InventoryFilter, InventoryItem, InventoryProduct, LearnedRateOf, StockStatus } from './inventory';
+export { formatRunway, groupInventory, runwayDays, stockStatus, stockTotals } from './inventory';
+export type {
+  InventoryFilter,
+  InventoryItem,
+  InventoryProduct,
+  LearnedRateOf,
+  StockStatus,
+  StockTotals,
+  StockTotalsProduct,
+} from './inventory';
 
 export {
   ALERT_LIMIT,

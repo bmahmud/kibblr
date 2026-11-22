@@ -245,6 +245,7 @@ Tabs: **Inventory**, **Shopping**, **Pets**, **Settings**. A floating **Scan** b
 - Search and filter by pet and category.
 - Row swipe: quick **-** (use) and **+** (add) one package.
 - Pull to refresh is unnecessary (live snapshots) but harmless.
+- **In stock summary** at the top: packages on hand by container ("18 cans · 2 bags", since cans and bags don't add up), plus total weight and volume from package sizes ("About 25.3 lb in all"; "At least" when some products have no size). It follows the search and filters. `stockTotals` in `packages/core`.
 
 ### 6.3 Scanner (`scan.tsx`)
 - Full-screen camera, `barcodeScannerSettings.barcodeTypes: ['ean13','ean8','upc_a','upc_e']`.
