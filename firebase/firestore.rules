@@ -2,7 +2,8 @@ rules_version = '2';
 
 // Spec section 5.4, plus: users/{uid} pointers (section 10), atomic household
 // bootstrap via getAfter(), createdBy/createdAt integrity on events, and
-// non-negative stock on products.
+// non-negative stock on products, and account deletion (Settings > Delete
+// account) removing everything a sole member owns.
 // Rules are the only real protection: the Firebase web config is public.
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -43,7 +44,8 @@ service cloud.firestore {
         && request.resource.data.keys().hasOnly(['householdId'])
         && request.resource.data.householdId is string
         && request.auth.uid in getAfter(householdPath(request.resource.data.householdId)).data.memberUids;
-      allow delete: if false;
+      // Account deletion removes the pointer last, after the household.
+      allow delete: if signedIn() && request.auth.uid == uid;
     }
 
     match /households/{hid} {
@@ -53,7 +55,8 @@ service cloud.firestore {
       // membership is immutable for now
       allow update: if isMember(hid)
         && request.resource.data.memberUids == resource.data.memberUids;
-      allow delete: if false;
+      // Only its sole member, when deleting their account (after its subcollections).
+      allow delete: if signedIn() && resource.data.memberUids == [request.auth.uid];
 
       match /pets/{id} {
         allow read, delete: if isMember(hid);
@@ -70,13 +73,14 @@ service cloud.firestore {
         }
       }
 
-      // Append-only ledger.
+      // Append-only ledger: never edited. Members may delete it, for account deletion.
       match /events/{id} {
         allow read: if isMember(hid);
         allow create: if isMember(hid)
           && request.resource.data.createdBy == request.auth.uid
           && request.resource.data.createdAt == request.time;
-        allow update, delete: if false;
+        allow delete: if isMember(hid);
+        allow update: if false;
       }
     }
   }

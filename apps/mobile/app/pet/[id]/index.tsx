@@ -1,10 +1,12 @@
 import { REACTION_LABELS, SPECIES_LABELS, latestRatingByPet, petFoods } from '@kibblr/core';
 import type { Pet, Product, WithId } from '@kibblr/core';
 import { Link, Stack, router, useLocalSearchParams } from 'expo-router';
-import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
+import { useState } from 'react';
+import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from 'react-native';
 
 import { Button } from '@/components/button';
 import { EmptyState } from '@/components/empty-state';
+import { useOnline } from '@/components/offline-banner';
 import { ProductImage } from '@/components/product-image';
 import { useToast } from '@/components/toast';
 import { VerdictBadge } from '@/components/verdict-badge';
@@ -16,7 +18,7 @@ import { usePets } from '@/features/pets/hooks';
 import { PetPhoto } from '@/features/pets/pet-photo';
 import { useRatings } from '@/features/ratings/hooks';
 import { ReactionBadge } from '@/features/ratings/reaction-badge';
-import { setPetArchived } from '@/firebase/repositories/pets';
+import { deletePet, setPetArchived } from '@/firebase/repositories/pets';
 import { useTheme } from '@/theme';
 
 export default function PetScreen() {
@@ -41,6 +43,8 @@ function PetDetail({ pet }: { pet: WithId<Pet> }) {
   const { colors, radius, spacing, typography, touchTarget } = useTheme();
   const { householdId } = useSignedIn();
   const toast = useToast();
+  const online = useOnline();
+  const [deleting, setDeleting] = useState(false);
   const products = useProducts();
   const foods = products.status === 'ready' ? petFoods(products.data, pet.id) : [];
   const summary = [
@@ -71,6 +75,26 @@ function PetDetail({ pet }: { pet: WithId<Pet> }) {
           ),
       },
     });
+    router.back();
+  }
+
+  function confirmDelete() {
+    Alert.alert(`Delete ${pet.name}?`, `This deletes ${pet.name} and their ratings. It can't be undone.`, [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete', style: 'destructive', onPress: () => void remove() },
+    ]);
+  }
+
+  async function remove() {
+    setDeleting(true);
+    try {
+      await deletePet(householdId, pet.id);
+    } catch (error) {
+      setDeleting(false);
+      toast.show({ message: inventoryErrorMessage(error), tone: 'error' });
+      return;
+    }
+    toast.show({ message: `Deleted ${pet.name}.` });
     router.back();
   }
 
@@ -165,6 +189,19 @@ function PetDetail({ pet }: { pet: WithId<Pet> }) {
           {pet.archived ? null : (
             <Text style={[typography.caption, { color: colors.textMuted, textAlign: 'center' }]}>
               Archived pets aren’t asked about or offered in pickers. Their ratings stay.
+            </Text>
+          )}
+          <Button
+            label="Delete pet"
+            variant="link"
+            tone="danger"
+            onPress={confirmDelete}
+            busy={deleting}
+            disabled={!online}
+          />
+          {online ? null : (
+            <Text style={[typography.caption, { color: colors.textMuted, textAlign: 'center' }]}>
+              Deleting needs a connection.
             </Text>
           )}
         </View>

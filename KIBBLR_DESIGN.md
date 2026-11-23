@@ -162,7 +162,7 @@ households/{hid}/products/{productId}/ratings/{ratingId}
   comment: string | null
   createdAt: Timestamp
 
-households/{hid}/events/{eventId}      # append-only
+households/{hid}/events/{eventId}      # append-only (deleted only with the account)
   productId: string
   petId: string | null
   type: 'add' | 'remove' | 'adjust'
@@ -193,7 +193,7 @@ Removing more than what is on hand clamps to 0 and the UI tells me.
 
 ### 5.4 Security rules (`firebase/firestore.rules`)
 
-Rules are the only real protection (the Firebase web config is not secret). Events are append-only.
+Rules are the only real protection (the Firebase web config is not secret). Events are never edited; members may delete them only so account deletion can clear the household. The full rules are in `firebase/firestore.rules`; this is the outline.
 
 ```
 rules_version = '2';
@@ -212,7 +212,8 @@ service cloud.firestore {
       // membership is immutable for now
       allow update: if isMember(hid)
         && request.resource.data.memberUids == resource.data.memberUids;
-      allow delete: if false;
+      // account deletion: only a household's sole member
+      allow delete: if request.auth != null && resource.data.memberUids == [request.auth.uid];
 
       match /pets/{id}     { allow read, write: if isMember(hid); }
       match /products/{id} {
@@ -221,14 +222,15 @@ service cloud.firestore {
       }
       match /events/{id} {
         allow read, create: if isMember(hid);
-        allow update, delete: if false;
+        allow delete: if isMember(hid);   // account deletion
+        allow update: if false;
       }
     }
   }
 }
 ```
 
-Write rules tests with the emulator: non-member denied, member allowed, event update/delete denied, `memberUids` cannot be changed.
+Write rules tests with the emulator: non-member denied, member allowed, event update denied, `memberUids` cannot be changed, and account deletion (sole member only) works in order.
 
 ---
 
@@ -243,6 +245,7 @@ Tabs: **Inventory**, **Shopping**, **Pets**, **Settings**. A floating **Scan** b
 - Search and filter by pet and category.
 - Row swipe: quick **-** (use) and **+** (add) one package.
 - Pull to refresh is unnecessary (live snapshots) but harmless.
+- **In stock summary** at the top: packages on hand by container ("18 cans · 2 bags", since cans and bags don't add up), plus total weight and volume from package sizes ("About 25.3 lb in all"; "At least" when some products have no size). It follows the search and filters. `stockTotals` in `packages/core`.
 
 ### 6.3 Scanner (`scan.tsx`)
 - Full-screen camera, `barcodeScannerSettings.barcodeTypes: ['ean13','ean8','upc_a','upc_e']`.
@@ -285,17 +288,18 @@ Prompt has three reaction buttons, an optional comment, and a Reorder / Skip / U
 - Share list as text.
 
 ### 6.7 Pets
-CRUD for pets; archive instead of delete. Per-pet view lists products they eat and their ratings.
+CRUD for pets. **Archive** hides a pet and keeps its ratings; **Delete** (asks first, needs a connection) removes the pet, its ratings and its tag on products. History entries keep the old `petId` and show no name. Per-pet view lists products they eat and their ratings.
 - "Products they eat" means the product's `petIds` or `ratedBy` includes the pet, so a rating always shows on the pet's page.
 - A pet can have a photo, taken or picked and cropped square. It is stored on the pet document as a small JPEG (no Cloud Storage), and shown wherever the pet appears.
 
 ### 6.8 Settings
-Notification toggle and hour, default low-stock days, weight unit, sign out, export data (JSON via share sheet), app version.
+Notification toggle and hour, default low-stock days, weight unit, sign out, delete account, export data (JSON via share sheet), app version.
 - **Reminders** (built in Phase 6): the toggle is per phone, like the permission it needs. The hour (`notifyHour`) and default low-stock days are household settings.
 - **Inventory**: the weight unit, and **Archived products**, a screen to restore or delete them.
 - **Export**: products, pets, ratings, events and the household's name and settings, as `kibblr-export-<date>.json`.
   - Photos are flagged (`hasPhoto`), not embedded, and member ids are left out.
   - iOS shares a file (Save to Files); Android shares the text.
+- **Delete account** (App Store guideline 5.1.1(v)): a screen that lists what goes, suggests Export first, and asks for the password (Firebase needs a recent sign-in). It deletes ratings, products, pets and events, then the household and `users/{uid}`, cancels this phone's reminders, then deletes the login.
 - **Appearance** (System / Light / Dark) and **Color theme** (Kibble, Ocean, Sage, Berry; each tints backgrounds and the accent, in light and dark). Saved per phone, not per household. Built ahead of Phase 7.
 
 ### 6.9 History

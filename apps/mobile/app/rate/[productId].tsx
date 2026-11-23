@@ -114,6 +114,8 @@ function RatingSheet({ product, pets, reason, initialPetId }: SheetProps) {
     <ScrollView
       style={{ backgroundColor: colors.background }}
       keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="interactive"
+      automaticallyAdjustKeyboardInsets
       contentContainerStyle={{ padding: spacing.xl, gap: spacing.lg }}>
       <Text accessibilityRole="header" style={[typography.title, { color: colors.text }]}>
         {title}

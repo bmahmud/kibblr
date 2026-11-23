@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { activePets, newPetDraft, petFoods, petInitials, validatePetForm } from './pets';
+import { activePets, newPetDraft, petDeletePlan, petFoods, petInitials, validatePetForm } from './pets';
 import { PHOTO_MAX, petSchema } from './schemas';
 
 describe('validatePetForm', () => {
@@ -87,5 +87,26 @@ describe('petInitials', () => {
     ['  Émile ', 'É'],
   ])('%s → %s', (name, initials) => {
     expect(petInitials(name)).toBe(initials);
+  });
+});
+
+describe('petDeletePlan', () => {
+  const products = [
+    { id: 'eats', petIds: ['miso', 'kiki'], ratedBy: [] },
+    { id: 'rated', petIds: [], ratedBy: ['miso'] },
+    { id: 'both', petIds: ['miso'], ratedBy: ['miso', 'kiki'] },
+    { id: 'other', petIds: ['kiki'], ratedBy: ['kiki'] },
+  ];
+
+  it('lists the products that name the pet, so its tag can be removed', () => {
+    expect(petDeletePlan(products, 'miso').untag).toEqual(['both', 'eats', 'rated']);
+  });
+
+  it('lists the products whose ratings include the pet', () => {
+    expect(petDeletePlan(products, 'miso').ratingsOn).toEqual(['both', 'rated']);
+  });
+
+  it('is empty for a pet nothing refers to', () => {
+    expect(petDeletePlan(products, 'nobody')).toEqual({ untag: [], ratingsOn: [] });
   });
 });

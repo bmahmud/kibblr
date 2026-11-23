@@ -13,6 +13,7 @@ import { TabHeader } from '@/components/tab-header';
 import { CATEGORY_DISPLAY } from '@/features/inventory/category';
 import { rateOf, useHouseholdSettings, useLearnedRates, useProducts } from '@/features/inventory/hooks';
 import { InventoryRow } from '@/features/inventory/inventory-row';
+import { StockSummary } from '@/features/inventory/stock-summary';
 import { useStockActions } from '@/features/inventory/use-stock-actions';
 import { usePets } from '@/features/pets/hooks';
 import { useTheme } from '@/theme';
@@ -96,6 +97,11 @@ export default function InventoryScreen() {
       </TabHeader>
       {all.length > 0 ? (
         <>
+          <StockSummary
+            products={[...lowOrOut, ...ok].map((item) => item.product)}
+            unit={settings.preferredWeightUnit}
+            filtered={query.trim() !== '' || category !== 'all' || petId !== null}
+          />
           <TextField
             label="Search"
             hideLabel
@@ -103,6 +109,7 @@ export default function InventoryScreen() {
             onChangeText={setQuery}
             placeholder="Search name or brand"
             autoCorrect={false}
+            spellCheck={false}
             clearButtonMode="while-editing"
             returnKeyType="search"
           />

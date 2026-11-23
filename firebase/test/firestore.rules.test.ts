@@ -149,9 +149,11 @@ describe('users/{uid}', () => {
     await assertFails(setDoc(doc(stranger(), `users/${OWNER}`), { householdId: HID }));
   });
 
-  it('cannot be deleted', async () => {
+  it('can be deleted only by its owner (account deletion)', async () => {
     await seedHousehold();
-    await assertFails(deleteDoc(doc(owner(), `users/${OWNER}`)));
+    await assertFails(deleteDoc(doc(stranger(), `users/${OWNER}`)));
+    await assertFails(deleteDoc(doc(anon(), `users/${OWNER}`)));
+    await assertSucceeds(deleteDoc(doc(owner(), `users/${OWNER}`)));
   });
 });
 
@@ -174,8 +176,16 @@ describe('households/{hid}', () => {
     await assertFails(updateDoc(doc(owner(), `households/${HID}`), { memberUids: [] }));
   });
 
-  it('cannot be deleted', async () => {
+  it('can be deleted by its sole member, not by anyone else', async () => {
     await seedHousehold();
+    await assertFails(deleteDoc(doc(stranger(), `households/${HID}`)));
+    await assertSucceeds(deleteDoc(doc(owner(), `households/${HID}`)));
+  });
+
+  it('cannot be deleted by one member of a shared household', async () => {
+    await seed(async (fs) => {
+      await setDoc(doc(fs, `households/${HID}`), householdData([OWNER, STRANGER]));
+    });
     await assertFails(deleteDoc(doc(owner(), `households/${HID}`)));
   });
 
@@ -230,6 +240,19 @@ describe('products (photo size)', () => {
   });
 });
 
+describe('account deletion', () => {
+  it('lets the owner delete everything in order: subcollections, household, then pointer', async () => {
+    await seedHousehold();
+    const fs = owner();
+    await assertSucceeds(deleteDoc(doc(fs, `households/${HID}/products/prod-1/ratings/r1`)));
+    await assertSucceeds(deleteDoc(doc(fs, `households/${HID}/products/prod-1`)));
+    await assertSucceeds(deleteDoc(doc(fs, `households/${HID}/pets/pet-1`)));
+    await assertSucceeds(deleteDoc(doc(fs, `households/${HID}/events/e1`)));
+    await assertSucceeds(deleteDoc(doc(fs, `households/${HID}`)));
+    await assertSucceeds(deleteDoc(doc(fs, `users/${OWNER}`)));
+  });
+});
+
 describe('events (append-only)', () => {
   const eventPath = `households/${HID}/events/e2`;
 
@@ -255,10 +278,15 @@ describe('events (append-only)', () => {
     await assertFails(setDoc(doc(owner(), eventPath), { ...eventData(OWNER), createdAt: Timestamp.now() }));
   });
 
-  it('cannot be updated or deleted, even by a member', async () => {
+  it('cannot be updated, even by a member', async () => {
     await seedHousehold();
     await assertFails(updateDoc(doc(owner(), `households/${HID}/events/e1`), { delta: 999 }));
-    await assertFails(deleteDoc(doc(owner(), `households/${HID}/events/e1`)));
+  });
+
+  it('can be deleted by a member (account deletion), not by a stranger', async () => {
+    await seedHousehold();
+    await assertFails(deleteDoc(doc(stranger(), `households/${HID}/events/e1`)));
+    await assertSucceeds(deleteDoc(doc(owner(), `households/${HID}/events/e1`)));
   });
 });
 

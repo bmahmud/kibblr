@@ -77,6 +77,7 @@ function RootStack() {
         <Stack.Screen name="product/new" options={{ title: 'New product', presentation: 'modal' }} />
         <Stack.Screen name="history" options={{ title: 'History' }} />
         <Stack.Screen name="archived" options={{ title: 'Archived products' }} />
+        <Stack.Screen name="delete-account" options={{ title: 'Delete account', presentation: 'modal' }} />
         <Stack.Screen name="pet/new" options={{ title: 'New pet', presentation: 'modal' }} />
         <Stack.Screen name="pet/[id]/index" options={{ title: 'Pet' }} />
         <Stack.Screen name="pet/[id]/edit" options={{ title: 'Edit pet', presentation: 'modal' }} />

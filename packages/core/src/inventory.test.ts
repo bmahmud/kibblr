@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import { DEFAULT_HOUSEHOLD_SETTINGS } from './household';
-import { formatRunway, groupInventory, runwayDays, stockStatus } from './inventory';
-import type { InventoryProduct } from './inventory';
+import { formatRunway, groupInventory, runwayDays, stockStatus, stockTotals } from './inventory';
+import type { InventoryProduct, StockTotalsProduct } from './inventory';
 
 const settings = DEFAULT_HOUSEHOLD_SETTINGS; // 7 low-stock days
 
@@ -148,5 +148,48 @@ describe('formatRunway', () => {
     expect(formatRunway(1.5)).toBe('~1 day');
     expect(formatRunway(0.4)).toBe('<1 day');
     expect(formatRunway(0)).toBe('<1 day');
+  });
+});
+
+describe('stockTotals', () => {
+  const item = (container: StockTotalsProduct['container'], onHand: number, size: StockTotalsProduct['size'] = null) => ({
+    container,
+    onHand,
+    size,
+  });
+
+  it('adds packages up by container, most first, skipping empty ones', () => {
+    const totals = stockTotals([item('can', 12), item('bag', 2), item('can', 6.5), item('box', 0)]);
+    expect(totals.containers).toEqual([
+      { container: 'can', count: 18.5 },
+      { container: 'bag', count: 2 },
+    ]);
+  });
+
+  it('breaks ties in the usual container order', () => {
+    expect(stockTotals([item('bag', 3), item('can', 3)]).containers.map((c) => c.container)).toEqual(['can', 'bag']);
+  });
+
+  it('adds weight and volume from package sizes, only for products that have one', () => {
+    const totals = stockTotals([
+      item('can', 12, { amount: 85, unit: 'g' }),
+      item('bag', 1.5, { amount: 7257, unit: 'g' }),
+      item('bottle', 2, { amount: 250, unit: 'ml' }),
+      item('box', 4),
+    ]);
+    expect(totals.weight).toEqual({ amount: 12 * 85 + 1.5 * 7257, unit: 'g' });
+    expect(totals.volume).toEqual({ amount: 500, unit: 'ml' });
+    expect(totals.unsized).toBe(1);
+  });
+
+  it('has no weight or volume when nothing in stock has a size', () => {
+    const totals = stockTotals([item('can', 3), item('can', 0, { amount: 85, unit: 'g' })]);
+    expect(totals.weight).toBeNull();
+    expect(totals.volume).toBeNull();
+    expect(totals.unsized).toBe(1);
+  });
+
+  it('is empty for no stock', () => {
+    expect(stockTotals([])).toEqual({ containers: [], weight: null, volume: null, unsized: 0 });
   });
 });

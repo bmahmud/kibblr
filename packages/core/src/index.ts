@@ -28,8 +28,16 @@ export type { AuthMode, CredentialErrors, CredentialInput } from './auth';
 export { computeAdjustment, computeStockChange, undoDelta } from './stock';
 export type { StockChange } from './stock';
 
-export { formatRunway, groupInventory, runwayDays, stockStatus } from './inventory';
-export type { InventoryFilter, InventoryItem, InventoryProduct, LearnedRateOf, StockStatus } from './inventory';
+export { formatRunway, groupInventory, runwayDays, stockStatus, stockTotals } from './inventory';
+export type {
+  InventoryFilter,
+  InventoryItem,
+  InventoryProduct,
+  LearnedRateOf,
+  StockStatus,
+  StockTotals,
+  StockTotalsProduct,
+} from './inventory';
 
 export {
   ALERT_LIMIT,
@@ -78,7 +86,7 @@ export { parseSizeText } from './size';
 export { LOOKUP_SOURCES, LOOKUP_SOURCE_LABELS, barcodeLookupSchema, lookupFormInput } from './lookup';
 export type { BarcodeLookup, LookupSource } from './lookup';
 
-export { PET_NAME_MAX, SPECIES_LABELS, activePets, newPetDraft, petFoods, petInitials, validatePetForm } from './pets';
+export { PET_NAME_MAX, SPECIES_LABELS, activePets, newPetDraft, petDeletePlan, petFoods, petInitials, validatePetForm } from './pets';
 export type { PetDraft, PetFields, PetFormResult } from './pets';
 
 export {
